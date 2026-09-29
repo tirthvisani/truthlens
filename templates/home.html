@@ -75,8 +75,12 @@ textarea.form-control{background:#141821;border:1px solid var(--line);color:#fff
 textarea.form-control::placeholder{color:#5f6673}
 textarea.form-control:focus{background:#141821;color:#fff;border-color:rgba(99,102,241,.65);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
 .analyzer-foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;color:var(--faint);font-size:10px}
-.demo-result{display:none;margin-top:12px;border:1px solid rgba(34,197,94,.18);background:rgba(34,197,94,.045);border-radius:9px;padding:13px}.demo-result.show{display:block;animation:resultIn .45s var(--spring) both}
-.verdict{font-size:12px;font-weight:800;color:var(--green)}.confidence{font-size:12px;font-weight:800}
+.demo-result{display:none;margin-top:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.025);border-radius:9px;padding:16px}.demo-result.show{display:block;animation:resultIn .45s var(--spring) both}
+.demo-result.real{border-color:rgba(34,197,94,.25);background:rgba(34,197,94,.055)}
+.demo-result.fake{border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.055)}
+.verdict{font-size:12px;font-weight:800}.verdict.real{color:var(--green)}.verdict.fake{color:#ff8088}.confidence{font-size:12px;font-weight:800}
+.result-note{font-size:10px;color:var(--muted);line-height:1.6;margin-top:7px;max-width:720px}
+.btn-main:disabled{opacity:.65;cursor:not-allowed;transform:none;box-shadow:none}
 
 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:47px}
 .card-ui{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:24px;min-height:210px;transition:transform .35s var(--spring),border-color .25s,box-shadow .35s}
@@ -172,20 +176,24 @@ footer{border-top:1px solid var(--line);padding:27px 0;color:var(--faint);font-s
  <div class="container">
   <div class="section-label reveal">Start with a claim</div>
   <h2 class="reveal">Don't just read it.<br><span class="gradient">Verify it.</span></h2>
-  <p class="lead reveal">Paste a headline, social-media statement, or factual claim and let TruthLens build an evidence-backed analysis.</p>
+  <p class="lead reveal">Paste a headline, social-media statement, or news article and let the trained TruthLens model estimate whether its text patterns look more like real or fake news.</p>
   <div class="analyzer reveal">
    <div class="analyzer-inner">
     <label class="input-label" for="claimInput">WHAT DO YOU WANT TO VERIFY?</label>
     <textarea id="claimInput" class="form-control" placeholder="Paste a claim here… e.g. “This new technology was officially approved worldwide.”"></textarea>
     <div class="analyzer-foot">
      <span><i class="bi bi-shield-check me-1"></i> AI-assisted · evidence-focused · confidence-aware</span>
-     <button class="btn-main" onclick="analyze()"><i class="bi bi-stars me-2"></i>Run Analysis</button>
+     <button class="btn-main" id="analyzeBtn" onclick="analyze()"><i class="bi bi-stars me-2"></i>Run Analysis</button>
     </div>
-    <div class="demo-result" id="result">
+    <div class="demo-result" id="result" aria-live="polite">
      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-      <div><span class="verdict"><i class="bi bi-check-circle-fill me-1"></i>LIKELY CREDIBLE</span><div class="text-secondary small mt-1">Demo interface state — connect your Flask/ML API for real predictions.</div></div>
-      <span class="confidence">92.8% confidence</span>
+      <div>
+       <span class="verdict" id="verdictText">RESULT</span>
+       <div class="text-secondary small mt-1" id="resultMessage"></div>
+      </div>
+      <span class="confidence" id="confidenceText"></span>
      </div>
+     <div class="result-note" id="resultDisclaimer"></div>
     </div>
    </div>
   </div>
@@ -199,7 +207,7 @@ footer{border-top:1px solid var(--line);padding:27px 0;color:var(--faint);font-s
   <p class="lead reveal">The user experience is built around understanding <em>why</em> a claim receives its result, not simply displaying a verdict.</p>
   <div class="cards stagger">
    <article class="card-ui reveal"><div class="icon-box"><i class="bi bi-cpu"></i></div><h3>Claim Understanding</h3><p>Identify the core factual statement and separate it from opinion, speculation, or surrounding context.</p></article>
-   <article class="card-ui reveal"><div class="icon-box"><i class="bi bi-diagram-3"></i></div><h3>Evidence Cross-Check</h3><p>Compare claims against relevant evidence and source signals to build a traceable verification path.</p></article>
+   <article class="card-ui reveal"><div class="icon-box"><i class="bi bi-diagram-3"></i></div><h3>TF-IDF Features</h3><p>Convert submitted text using the same TF-IDF vocabulary learned during training so the classifier receives consistent features.</p></article>
    <article class="card-ui reveal"><div class="icon-box"><i class="bi bi-graph-up-arrow"></i></div><h3>Confidence Scoring</h3><p>Communicate uncertainty instead of pretending every prediction is absolute. Strong signals get stronger confidence.</p></article>
   </div>
  </div>
@@ -211,8 +219,8 @@ footer{border-top:1px solid var(--line);padding:27px 0;color:var(--faint);font-s
   <h2 class="reveal">From “I saw this”<br>to <span class="gradient">“I understand this.”</span></h2>
   <div class="flow">
    <div class="flow-step reveal"><span class="num">01 / INPUT</span><h3>Bring the claim</h3><p>Paste the text or provide the information you want to investigate.</p></div>
-   <div class="flow-step reveal"><span class="num">02 / ANALYZE</span><h3>Trace the evidence</h3><p>TruthLens processes the claim, evaluates signals, and checks relevant evidence.</p></div>
-   <div class="flow-step reveal"><span class="num">03 / UNDERSTAND</span><h3>Inspect the result</h3><p>See the verdict, confidence score, evidence, and reasoning behind the analysis.</p></div>
+   <div class="flow-step reveal"><span class="num">02 / ANALYZE</span><h3>Run the classifier</h3><p>TruthLens converts the text into TF-IDF features and passes them to the trained Logistic Regression model.</p></div>
+   <div class="flow-step reveal"><span class="num">03 / UNDERSTAND</span><h3>Inspect the result</h3><p>See the predicted label and confidence score, then use reliable external sources for final verification.</p></div>
   </div>
  </div>
 </section>
@@ -277,12 +285,57 @@ function animateCounter(el){
 
 function scrollToId(id){document.getElementById(id)?.scrollIntoView({behavior:reduced?'auto':'smooth'})}
 
-function analyze(){
+async function analyze(){
  const input=document.getElementById('claimInput');
- if(!input.value.trim()){input.focus();toast('Paste a claim first');return}
- const result=document.getElementById('result');
- result.classList.remove('show'); void result.offsetWidth; result.classList.add('show');
- toast('Demo analysis completed');
+ const button=document.getElementById('analyzeBtn');
+ const content=input.value.trim();
+
+ if(!content){input.focus();toast('Paste a claim first');return}
+ if(content.length<20){input.focus();toast('Enter at least 20 characters');return}
+
+ button.disabled=true;
+ button.innerHTML='<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Analyzing...';
+
+ try{
+  const response=await fetch('/api/analyze',{
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({content})
+  });
+
+  const data=await response.json();
+
+  if(!response.ok || !data.success){
+   throw new Error(data.error || 'Analysis failed');
+  }
+
+  const isFake=data.prediction==='Fake';
+  const result=document.getElementById('result');
+  const verdict=document.getElementById('verdictText');
+
+  result.classList.remove('show','real','fake');
+  verdict.classList.remove('real','fake');
+
+  result.classList.add(isFake?'fake':'real');
+  verdict.classList.add(isFake?'fake':'real');
+
+  verdict.innerHTML=isFake
+   ? '<i class="bi bi-exclamation-triangle-fill me-1"></i>LIKELY FAKE'
+   : '<i class="bi bi-check-circle-fill me-1"></i>LIKELY REAL';
+
+  document.getElementById('confidenceText').textContent=data.confidence.toFixed(2)+'% confidence';
+  document.getElementById('resultMessage').textContent=data.message;
+  document.getElementById('resultDisclaimer').textContent=data.disclaimer;
+
+  void result.offsetWidth;
+  result.classList.add('show');
+  toast('Analysis completed');
+ }catch(error){
+  toast(error.message || 'Could not analyze this text');
+ }finally{
+  button.disabled=false;
+  button.innerHTML='<i class="bi bi-stars me-2"></i>Run Analysis';
+ }
 }
 
 function toast(message){
