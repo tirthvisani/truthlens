@@ -1,12 +1,14 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from datetime import datetime
+from pathlib import Path
+import os
+import joblib
 
 
 app = Flask(__name__)
-import os
 
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-only-secret")
 # ---------------------------------------------------------
@@ -23,6 +25,26 @@ app.config['SQLALCHEMY_DATABASE_URI'] = \
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+
+# ---------------------------------------------------------
+# TruthLens ML Model
+# ---------------------------------------------------------
+
+BASE_DIR = Path(__file__).resolve().parent
+MODEL_PATH = BASE_DIR / "training" / "truthlens_model.pkl"
+VECTORIZER_PATH = BASE_DIR / "training" / "truthlens_tfidf_vectorizer.pkl"
+
+truthlens_model = None
+truthlens_vectorizer = None
+model_load_error = None
+
+try:
+    truthlens_model = joblib.load(MODEL_PATH)
+    truthlens_vectorizer = joblib.load(VECTORIZER_PATH)
+    print("TruthLens ML model loaded successfully.")
+except Exception as exc:
+    model_load_error = str(exc)
+    print(f"Warning: TruthLens ML model could not be loaded: {exc}")
 
 
 # ---------------------------------------------------------
@@ -273,6 +295,72 @@ def home():
         user_name=session.get('user_name'),
         user_email=session.get('user_email')
     )
+
+
+# ---------------------------------------------------------
+# TruthLens AI - Step 5: Prediction API
+# ---------------------------------------------------------
+
+@app.route("/api/analyze", methods=["POST"])
+@login_required
+def analyze_news():
+
+    if truthlens_model is None or truthlens_vectorizer is None:
+        return jsonify({
+            "success": False,
+            "error": "The TruthLens ML model is not available.",
+            "details": model_load_error
+        }), 503
+
+    data = request.get_json(silent=True) or {}
+    content = str(data.get("content", "")).strip()
+
+    if not content:
+        return jsonify({
+            "success": False,
+            "error": "Please enter a news article, headline, or claim."
+        }), 400
+
+    if len(content) < 20:
+        return jsonify({
+            "success": False,
+            "error": "Please enter at least 20 characters for a more meaningful analysis."
+        }), 400
+
+    try:
+        features = truthlens_vectorizer.transform([content])
+        predicted_label = int(truthlens_model.predict(features)[0])
+
+        probabilities = truthlens_model.predict_proba(features)[0]
+        classes = list(truthlens_model.classes_)
+        predicted_index = classes.index(predicted_label)
+        confidence = float(probabilities[predicted_index])
+
+        verdict = "Fake" if predicted_label == 1 else "Real"
+
+        return jsonify({
+            "success": True,
+            "prediction": verdict,
+            "label": predicted_label,
+            "confidence": round(confidence * 100, 2),
+            "message": (
+                "The model found text patterns associated with potentially fake news."
+                if predicted_label == 1
+                else
+                "The model found text patterns associated with real news."
+            ),
+            "disclaimer": (
+                "This is a machine-learning prediction based on language patterns, "
+                "not a definitive fact-check. Verify important claims with reliable sources."
+            )
+        })
+
+    except Exception as exc:
+        app.logger.exception("TruthLens prediction failed")
+        return jsonify({
+            "success": False,
+            "error": "The analysis could not be completed."
+        }), 500
 
 
 # ---------------------------------------------------------
