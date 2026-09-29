@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TruthLens AI — Verify Before You Trust</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#080a10;--surface:#10131b;--surface2:#171b25;--elevated:#202532;
+ --text:#f3f4f6;--muted:#9ca3af;--faint:#626a78;--line:rgba(255,255,255,.08);
+ --accent:#6366f1;--accent2:#8b8df8;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;
+ --ease-out:cubic-bezier(0,0,.2,1);--spring:cubic-bezier(.175,.885,.32,1.275);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;overflow-x:hidden}
+body:before{
+ content:"";position:fixed;inset:0;pointer-events:none;z-index:99;opacity:.025;
+ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E");
+}
+.navbar{position:fixed;top:0;left:0;right:0;z-index:50;background:rgba(8,10,16,.7);backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:background .3s var(--ease-out),border-color .3s var(--ease-out),transform .3s var(--ease-out)}
+.navbar.scrolled{background:rgba(8,10,16,.92);border-color:var(--line)}
+.brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:800}
+.brand-mark{width:35px;height:35px;border-radius:10px;background:linear-gradient(135deg,#8588ff,#4f46e5);display:grid;place-items:center;box-shadow:0 8px 25px rgba(99,102,241,.28);transition:transform .25s var(--spring)}
+.brand:hover .brand-mark{transform:rotate(-6deg) scale(1.06)}
+.nav-link{color:#aeb3bf!important;font-size:12px;margin:0 7px;transition:color .2s var(--ease-out),transform .2s var(--spring)}
+.nav-link:hover{color:#fff!important;transform:translateY(-1px)}
+.btn-main{border:0;background:var(--accent);color:#fff;border-radius:9px;padding:10px 15px;font-size:12px;font-weight:700;transition:transform .2s var(--spring),box-shadow .2s var(--ease-out),background .2s}
+.btn-main:hover{background:var(--accent2);color:#fff;transform:translateY(-2px);box-shadow:0 12px 30px rgba(99,102,241,.25)}
+.btn-main:active{transform:scale(.97)}
+.btn-ghost{background:rgba(255,255,255,.045);border:1px solid var(--line);color:#fff;border-radius:9px;padding:10px 15px;font-size:12px;font-weight:600;transition:transform .2s var(--spring),background .2s,border-color .2s}
+.btn-ghost:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16);color:#fff;transform:translateY(-2px)}
+.btn-ghost:active{transform:scale(.97)}
+
+.hero{min-height:100vh;position:relative;display:flex;align-items:center;overflow:hidden;padding-top:70px}
+.hero-grid{position:absolute;inset:0;opacity:.28;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:55px 55px;mask-image:linear-gradient(to bottom,black,transparent 85%)}
+.glow{position:absolute;border-radius:50%;filter:blur(1px);pointer-events:none}
+.glow.one{width:500px;height:500px;right:-140px;top:80px;background:radial-gradient(circle,rgba(99,102,241,.18),transparent 65%);animation:floatA 8s ease-in-out infinite}
+.glow.two{width:380px;height:380px;left:-180px;bottom:-100px;background:radial-gradient(circle,rgba(59,130,246,.09),transparent 65%);animation:floatB 10s ease-in-out infinite}
+.hero-content{position:relative;z-index:3;max-width:720px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(139,141,248,.23);background:rgba(99,102,241,.08);border-radius:999px;padding:7px 11px;color:#bfc1ff;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.pulse-dot{width:6px;height:6px;background:var(--green);border-radius:50%;box-shadow:0 0 0 0 rgba(34,197,94,.45);animation:pulse 2s infinite}
+h1{font-size:clamp(48px,7vw,86px);line-height:.94;letter-spacing:-.065em;font-weight:800;margin:22px 0 20px}
+.gradient{background:linear-gradient(100deg,#fff 12%,#aaaaff 58%,#7276ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-copy{font-size:16px;line-height:1.75;color:#aeb4c0;max-width:625px;margin-bottom:27px}
+.hero-actions{display:flex;gap:10px;flex-wrap:wrap}
+.stats{display:flex;gap:30px;margin-top:38px}.stat strong{font-size:18px;display:block}.stat span{font-size:10px;color:var(--faint)}
+.hero-visual{position:absolute;right:4%;top:50%;transform:translateY(-46%);width:min(43vw,560px);height:min(43vw,560px);z-index:2}
+.lens{position:absolute;inset:7%;border-radius:50%;border:1px solid rgba(139,141,248,.22);box-shadow:0 0 90px rgba(99,102,241,.12),inset 0 0 70px rgba(99,102,241,.05);display:grid;place-items:center;animation:lensFloat 7s ease-in-out infinite}
+.lens:before,.lens:after{content:"";position:absolute;border-radius:50%;inset:10%;border:1px solid rgba(99,102,241,.14)}
+.lens:after{inset:23%;border-color:rgba(139,141,248,.22);box-shadow:inset 0 0 35px rgba(99,102,241,.12)}
+.core{width:26%;height:26%;border-radius:50%;background:radial-gradient(circle at 38% 35%,#d7d8ff 0 4%,#8588ff 14%,#4f46e5 45%,#151633 72%,transparent 73%);box-shadow:0 0 50px rgba(99,102,241,.55);animation:corePulse 4s ease-in-out infinite}
+.scan{position:absolute;width:42%;height:1px;background:linear-gradient(90deg,transparent,#a5a7ff,transparent);box-shadow:0 0 14px rgba(139,141,248,.7);animation:scan 4.8s ease-in-out infinite}
+.orbit{position:absolute;inset:1%;border:1px dashed rgba(255,255,255,.08);border-radius:50%;animation:spin 24s linear infinite}
+.orbit i{position:absolute;width:7px;height:7px;border-radius:50%;background:#8b8df8;box-shadow:0 0 12px #6366f1;top:7%;left:50%}
+.signal{position:absolute;padding:7px 9px;border:1px solid var(--line);background:rgba(16,19,27,.75);backdrop-filter:blur(9px);border-radius:8px;font-size:9px;color:#b9bdc7;box-shadow:0 8px 25px rgba(0,0,0,.18)}
+.signal strong{color:#fff;display:block;font-size:10px;margin-bottom:2px}.signal.a{top:13%;right:0;animation:signalA 5s ease-in-out infinite}.signal.b{left:-2%;top:49%;animation:signalB 6s ease-in-out infinite}.signal.c{right:6%;bottom:11%;animation:signalC 5.5s ease-in-out infinite}
+
+.section{padding:105px 0;position:relative}.dark{background:#0b0d13}
+.section-label{font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--accent2);font-weight:800}
+h2{font-size:clamp(32px,4vw,52px);line-height:1;letter-spacing:-.05em;font-weight:800;margin:9px 0 15px}.lead{color:var(--muted);font-size:13px;line-height:1.75;max-width:650px}
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .55s var(--ease-out),transform .55s var(--ease-out);will-change:transform,opacity}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.stagger>*{--delay:0ms;transition-delay:var(--delay)}
+.stagger>*:nth-child(1){--delay:40ms}.stagger>*:nth-child(2){--delay:100ms}.stagger>*:nth-child(3){--delay:160ms}.stagger>*:nth-child(4){--delay:220ms}
+
+.analyzer{margin-top:43px;background:linear-gradient(145deg,#171b27,#0d1017);border:1px solid var(--line);border-radius:17px;padding:7px;box-shadow:0 30px 70px rgba(0,0,0,.28);transition:transform .4s var(--ease-out),box-shadow .4s}
+.analyzer:hover{transform:translateY(-3px);box-shadow:0 35px 80px rgba(0,0,0,.38)}
+.analyzer-inner{background:#0a0d13;border:1px solid rgba(255,255,255,.055);border-radius:12px;padding:27px}
+.input-label{font-size:11px;font-weight:700;color:#c8cbd3;margin-bottom:9px}
+textarea.form-control{background:#141821;border:1px solid var(--line);color:#fff;border-radius:9px;min-height:130px;resize:none;font-size:13px;padding:14px}
+textarea.form-control::placeholder{color:#5f6673}
+textarea.form-control:focus{background:#141821;color:#fff;border-color:rgba(99,102,241,.65);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+.analyzer-foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;color:var(--faint);font-size:10px}
+.demo-result{display:none;margin-top:12px;border:1px solid rgba(34,197,94,.18);background:rgba(34,197,94,.045);border-radius:9px;padding:13px}.demo-result.show{display:block;animation:resultIn .45s var(--spring) both}
+.verdict{font-size:12px;font-weight:800;color:var(--green)}.confidence{font-size:12px;font-weight:800}
+
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:47px}
+.card-ui{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:24px;min-height:210px;transition:transform .35s var(--spring),border-color .25s,box-shadow .35s}
+.card-ui:hover{transform:translateY(-7px);border-color:rgba(99,102,241,.34);box-shadow:0 20px 40px rgba(0,0,0,.22)}
+.icon-box{width:40px;height:40px;border-radius:10px;background:rgba(99,102,241,.11);color:#a4a6ff;display:grid;place-items:center;font-size:18px;margin-bottom:20px;transition:transform .3s var(--spring)}
+.card-ui:hover .icon-box{transform:rotate(-5deg) scale(1.08)}
+.card-ui h3{font-size:15px;margin-bottom:8px}.card-ui p{font-size:11px;line-height:1.75;color:var(--muted);margin:0}
+
+.flow{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:52px;border-top:1px solid var(--line)}
+.flow-step{padding:28px 25px;border-right:1px solid var(--line);position:relative}.flow-step:last-child{border-right:0}
+.num{font-size:10px;color:var(--accent2);font-weight:800;letter-spacing:.1em}.flow-step h3{font-size:16px;margin:18px 0 8px}.flow-step p{color:var(--muted);font-size:11px;line-height:1.75;margin:0}
+.flow-step:after{content:"";position:absolute;left:0;top:-1px;width:0;height:1px;background:var(--accent);transition:width .6s var(--ease-out)}.flow-step.visible:after{width:100%}
+
+.live-panel{margin-top:45px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,#151923,#0e1118);padding:24px;overflow:hidden}
+.live-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.live-title{font-size:13px;font-weight:700}.live-status{font-size:9px;color:var(--green);display:flex;align-items:center;gap:6px}
+.feed{display:grid;gap:8px}.feed-row{display:grid;grid-template-columns:95px 1fr 100px 75px;align-items:center;gap:12px;padding:12px;border:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.018);border-radius:8px;font-size:10px;transition:transform .25s var(--spring),background .2s}
+.feed-row:hover{transform:translateX(5px);background:rgba(255,255,255,.035)}
+.feed-row .source{color:var(--muted)}.feed-row .claim{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tag{justify-self:start;border-radius:999px;padding:4px 7px;font-size:8px;font-weight:800}.tag.false{color:#ff8088;background:rgba(239,68,68,.1)}.tag.verified{color:#5ee78b;background:rgba(34,197,94,.1)}.tag.review{color:#ffc45d;background:rgba(245,158,11,.1)}
+.score{color:#c9cbd2;font-weight:700;text-align:right}
+
+.cta{padding:105px 0;text-align:center;background:radial-gradient(circle at 50% 45%,rgba(99,102,241,.15),transparent 37%),#0b0d13}.cta .lead{margin:0 auto 25px}
+footer{border-top:1px solid var(--line);padding:27px 0;color:var(--faint);font-size:10px}
+
+@keyframes pulse{70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@keyframes floatA{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(-18px,15px,0)}}
+@keyframes floatB{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(18px,-12px,0)}}
+@keyframes lensFloat{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-10px,0)}}
+@keyframes corePulse{0%,100%{transform:scale(1);box-shadow:0 0 50px rgba(99,102,241,.55)}50%{transform:scale(1.06);box-shadow:0 0 70px rgba(99,102,241,.75)}}
+@keyframes scan{0%,100%{transform:translateY(-115px) scaleX(.8);opacity:0}18%{opacity:1}52%{transform:translateY(115px) scaleX(1);opacity:1}70%{opacity:0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes signalA{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(8px,-7px,0)}}
+@keyframes signalB{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(-7px,8px,0)}}
+@keyframes signalC{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(6px,5px,0)}}
+@keyframes resultIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+@media(max-width:991px){.hero-visual{opacity:.38;right:-15%;width:560px;height:560px}.hero-content{max-width:650px}.cards{grid-template-columns:1fr 1fr}.cards .card-ui:last-child{grid-column:1/-1}}
+@media(max-width:767px){
+ .navbar .links,.navbar .auth{display:none}.hero{padding-top:100px;min-height:760px}.hero-visual{opacity:.2;right:-42%;top:57%}
+ h1{font-size:52px}.hero-copy{font-size:14px}.stats{gap:17px}.stat strong{font-size:16px}
+ .section{padding:75px 0}.cards,.flow{grid-template-columns:1fr}.cards .card-ui:last-child{grid-column:auto}.flow-step{border-right:0;border-bottom:1px solid var(--line)}.flow-step:last-child{border-bottom:0}
+ .analyzer-inner{padding:18px}.analyzer-foot{flex-direction:column;align-items:flex-start;gap:10px}.feed-row{grid-template-columns:65px 1fr 60px}.feed-row .score{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+ html{scroll-behavior:auto}
+ *,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+ .reveal{opacity:1!important;transform:none!important}
+}
+</style>
+</head>
+<body>
+
+<nav class="navbar" id="navbar">
+ <div class="container d-flex align-items-center py-2">
+  <a href="#" class="brand"><span class="brand-mark"><i class="bi bi-eye"></i></span>TruthLens AI</a>
+  <div class="links ms-auto d-flex align-items-center">
+   <a class="nav-link" href="#analyze">Analyze</a>
+   <a class="nav-link" href="#technology">Technology</a>
+   <a class="nav-link" href="#how">How it works</a>
+  </div>
+  <div class="auth ms-3 d-flex gap-2">
+   <a class="btn btn-ghost" href="{{ url_for('logout') }}">Log out</a>
+   <button class="btn-main" onclick="scrollToId('analyze')">Try TruthLens</button>
+  </div>
+ </div>
+</nav>
+
+<header class="hero">
+ <div class="hero-grid"></div><div class="glow one"></div><div class="glow two"></div>
+ <div class="container">
+  <div class="hero-content">
+   <div class="eyebrow reveal"><span class="pulse-dot"></span> AI-powered truth intelligence</div>
+   <h1 class="reveal">Before you <span class="gradient">believe it.</span><br>Put it through a lens.</h1>
+   <p class="hero-copy reveal">TruthLens AI helps you investigate online claims by analyzing their context, checking evidence, and showing how confident the system is in its verdict.</p>
+   <div class="hero-actions reveal">
+    <button class="btn-main" onclick="scrollToId('analyze')"><i class="bi bi-search me-2"></i>Analyze a Claim</button>
+    <button class="btn-ghost" onclick="scrollToId('how')"><i class="bi bi-arrow-down-right me-2"></i>See how it works</button>
+   </div>
+   <div class="stats reveal">
+    <div class="stat"><strong data-count="12846">0</strong><span>claims analyzed</span></div>
+    <div class="stat"><strong data-count="48200">0</strong><span>sources cross-checked</span></div>
+    <div class="stat"><strong data-count="94.7" data-decimal="1">0</strong><span>avg. confidence %</span></div>
+   </div>
+  </div>
+ </div>
+ <div class="hero-visual" aria-hidden="true">
+  <div class="orbit"><i></i></div><div class="lens"><div class="scan"></div><div class="core"></div></div>
+  <div class="signal a"><strong>CLAIM DETECTED</strong>Natural language analysis</div>
+  <div class="signal b"><strong>EVIDENCE MATCH</strong>7 relevant sources</div>
+  <div class="signal c"><strong>CONFIDENCE 94.7%</strong>High confidence signal</div>
+ </div>
+</header>
+
+<section class="section" id="analyze">
+ <div class="container">
+  <div class="section-label reveal">Start with a claim</div>
+  <h2 class="reveal">Don't just read it.<br><span class="gradient">Verify it.</span></h2>
+  <p class="lead reveal">Paste a headline, social-media statement, or factual claim and let TruthLens build an evidence-backed analysis.</p>
+  <div class="analyzer reveal">
+   <div class="analyzer-inner">
+    <label class="input-label" for="claimInput">WHAT DO YOU WANT TO VERIFY?</label>
+    <textarea id="claimInput" class="form-control" placeholder="Paste a claim here… e.g. “This new technology was officially approved worldwide.”"></textarea>
+    <div class="analyzer-foot">
+     <span><i class="bi bi-shield-check me-1"></i> AI-assisted · evidence-focused · confidence-aware</span>
+     <button class="btn-main" onclick="analyze()"><i class="bi bi-stars me-2"></i>Run Analysis</button>
+    </div>
+    <div class="demo-result" id="result">
+     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div><span class="verdict"><i class="bi bi-check-circle-fill me-1"></i>LIKELY CREDIBLE</span><div class="text-secondary small mt-1">Demo interface state — connect your Flask/ML API for real predictions.</div></div>
+      <span class="confidence">92.8% confidence</span>
+     </div>
+    </div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section class="section dark" id="technology">
+ <div class="container">
+  <div class="section-label reveal">The intelligence behind the lens</div>
+  <h2 class="reveal">More than a<br><span class="gradient">yes or no.</span></h2>
+  <p class="lead reveal">The user experience is built around understanding <em>why</em> a claim receives its result, not simply displaying a verdict.</p>
+  <div class="cards stagger">
+   <article class="card-ui reveal"><div class="icon-box"><i class="bi bi-cpu"></i></div><h3>Claim Understanding</h3><p>Identify the core factual statement and separate it from opinion, speculation, or surrounding context.</p></article>
+   <article class="card-ui reveal"><div class="icon-box"><i class="bi bi-diagram-3"></i></div><h3>Evidence Cross-Check</h3><p>Compare claims against relevant evidence and source signals to build a traceable verification path.</p></article>
+   <article class="card-ui reveal"><div class="icon-box"><i class="bi bi-graph-up-arrow"></i></div><h3>Confidence Scoring</h3><p>Communicate uncertainty instead of pretending every prediction is absolute. Strong signals get stronger confidence.</p></article>
+  </div>
+ </div>
+</section>
+
+<section class="section" id="how">
+ <div class="container">
+  <div class="section-label reveal">Simple workflow</div>
+  <h2 class="reveal">From “I saw this”<br>to <span class="gradient">“I understand this.”</span></h2>
+  <div class="flow">
+   <div class="flow-step reveal"><span class="num">01 / INPUT</span><h3>Bring the claim</h3><p>Paste the text or provide the information you want to investigate.</p></div>
+   <div class="flow-step reveal"><span class="num">02 / ANALYZE</span><h3>Trace the evidence</h3><p>TruthLens processes the claim, evaluates signals, and checks relevant evidence.</p></div>
+   <div class="flow-step reveal"><span class="num">03 / UNDERSTAND</span><h3>Inspect the result</h3><p>See the verdict, confidence score, evidence, and reasoning behind the analysis.</p></div>
+  </div>
+ </div>
+</section>
+
+<section class="section dark">
+ <div class="container">
+  <div class="section-label reveal">TruthLens in motion</div>
+  <h2 class="reveal">A live look at the<br><span class="gradient">verification pulse.</span></h2>
+  <div class="live-panel reveal">
+   <div class="live-head"><div class="live-title">Recent analysis signals</div><div class="live-status"><span class="pulse-dot"></span> SYSTEM ACTIVE</div></div>
+   <div class="feed">
+    <div class="feed-row"><span class="source">Social Media</span><span class="claim">“The new policy will eliminate income tax for everyone.”</span><span class="tag false">FALSE</span><span class="score">98.2%</span></div>
+    <div class="feed-row"><span class="source">News</span><span class="claim">“Researchers announce breakthrough in battery efficiency.”</span><span class="tag verified">VERIFIED</span><span class="score">96.7%</span></div>
+    <div class="feed-row"><span class="source">News</span><span class="claim">“Major storm expected to hit western India this weekend.”</span><span class="tag review">REVIEW</span><span class="score">71.4%</span></div>
+    <div class="feed-row"><span class="source">Social Media</span><span class="claim">“This viral image was taken during yesterday's event.”</span><span class="tag false">FALSE</span><span class="score">99.1%</span></div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section class="cta">
+ <div class="container">
+  <div class="section-label reveal">The next time something looks unbelievable</div>
+  <h2 class="reveal">Put a lens on it.</h2>
+  <p class="lead reveal">Pause. Investigate. Understand. TruthLens AI is designed to help users make more informed decisions in an internet full of uncertain information.</p>
+  <button class="btn-main reveal" onclick="scrollToId('analyze')">Start verifying <i class="bi bi-arrow-right ms-2"></i></button>
+ </div>
+</section>
+
+<footer><div class="container d-flex justify-content-between flex-wrap gap-2"><span>© 2026 TruthLens AI</span><span>AI-assisted verification · Human judgment remains essential.</span></div></footer>
+
+<script>
+const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Motion design: scroll reveals communicate spatial hierarchy without animating layout properties.
+const observer=new IntersectionObserver(entries=>{
+ entries.forEach(entry=>{
+  if(entry.isIntersecting){
+   entry.target.classList.add('visible');
+   if(entry.target.matches('[data-count]')) animateCounter(entry.target);
+   if(entry.target.classList.contains('flow-step')) entry.target.classList.add('visible');
+   observer.unobserve(entry.target);
+  }
+ });
+},{threshold:.14,rootMargin:'0px 0px -40px'});
+
+document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+
+function animateCounter(el){
+ if(el.dataset.done)return; el.dataset.done='1';
+ const target=parseFloat(el.dataset.count), decimal=parseInt(el.dataset.decimal||'0');
+ if(reduced){el.textContent=target.toFixed(decimal);return}
+ const duration=900,start=performance.now();
+ function tick(now){
+  const p=Math.min((now-start)/duration,1);
+  const eased=1-Math.pow(1-p,3);
+  el.textContent=(target*eased).toFixed(decimal).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  if(p<1)requestAnimationFrame(tick);
+ }
+ requestAnimationFrame(tick);
+}
+
+function scrollToId(id){document.getElementById(id)?.scrollIntoView({behavior:reduced?'auto':'smooth'})}
+
+function analyze(){
+ const input=document.getElementById('claimInput');
+ if(!input.value.trim()){input.focus();toast('Paste a claim first');return}
+ const result=document.getElementById('result');
+ result.classList.remove('show'); void result.offsetWidth; result.classList.add('show');
+ toast('Demo analysis completed');
+}
+
+function toast(message){
+ let el=document.getElementById('toast');
+ if(!el){
+  el=document.createElement('div');el.id='toast';
+  el.style.cssText='position:fixed;right:20px;bottom:20px;z-index:100;background:#202532;border:1px solid rgba(255,255,255,.1);padding:12px 16px;border-radius:9px;box-shadow:0 12px 35px #0008;font-size:11px';
+  document.body.appendChild(el);
+ }
+ el.textContent=message;el.style.display='block';clearTimeout(window.toastTimer);
+ window.toastTimer=setTimeout(()=>el.style.display='none',2800);
+}
+
+window.addEventListener('scroll',()=>{
+ document.getElementById('navbar').classList.toggle('scrolled',window.scrollY>30);
+},{passive:true});
+</script>
+</body>
+</html>

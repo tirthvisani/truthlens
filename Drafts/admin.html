@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TruthLens AI — Intelligence Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg-primary:#0f1117; --bg-secondary:#171a23; --bg-tertiary:#202430;
+      --bg-elevated:#272b38; --border:rgba(255,255,255,.08);
+      --text:#e8eaed; --muted:#9aa0a8; --faint:#686f7b;
+      --accent:#6366f1; --accent2:#818cf8; --success:#22c55e;
+      --warning:#f59e0b; --danger:#ef4444; --info:#3b82f6;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg-primary);color:var(--text);font-family:Inter,system-ui,sans-serif;font-size:14px}
+    .app{min-height:100vh;display:grid;grid-template-columns:250px 1fr;grid-template-rows:64px 1fr}
+    .sidebar{grid-row:1/3;background:#11141b;border-right:1px solid var(--border);padding:18px 12px;display:flex;flex-direction:column;transition:.25s}
+    .brand{display:flex;align-items:center;gap:11px;padding:4px 10px 22px;font-weight:800;font-size:17px}
+    .brand-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#818cf8,#4f46e5);display:grid;place-items:center;box-shadow:0 8px 24px rgba(99,102,241,.25)}
+    .brand small{display:block;color:var(--faint);font-size:9px;font-weight:600;letter-spacing:.12em;margin-top:2px}
+    .nav-title{color:#5f6672;text-transform:uppercase;font-size:10px;font-weight:700;letter-spacing:.12em;padding:12px 12px 7px}
+    .nav-link{color:var(--muted);display:flex;align-items:center;gap:11px;border-radius:8px;padding:10px 12px;margin:2px 0;text-decoration:none;transition:.18s}
+    .nav-link i{font-size:16px;width:18px}.nav-link:hover{background:rgba(255,255,255,.045);color:var(--text)}
+    .nav-link.active{background:rgba(99,102,241,.14);color:#c7c9ff;border-left:3px solid var(--accent);padding-left:9px}
+    .sidebar-bottom{margin-top:auto;border-top:1px solid var(--border);padding-top:12px}
+    .header{grid-column:2;background:rgba(15,17,23,.92);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:18px;padding:0 24px;position:sticky;top:0;z-index:10;backdrop-filter:blur(14px)}
+    .header-title{font-weight:700;font-size:15px;white-space:nowrap}
+    .search{max-width:430px;flex:1;position:relative}.search i{position:absolute;left:13px;top:9px;color:var(--faint)}
+    .search input{width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:8px 38px;color:var(--text);outline:0}
+    .search input:focus{border-color:rgba(99,102,241,.7);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+    .header-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+    .icon-btn{width:36px;height:36px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--muted);border-radius:8px;display:grid;place-items:center}
+    .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#a5b4fc,#4f46e5);display:grid;place-items:center;color:white;font-weight:700}
+    main{grid-column:2;padding:26px;min-width:0}
+    .page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:22px}
+    .eyebrow{color:var(--accent2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em}
+    h1{font-size:27px;margin:3px 0 5px;font-weight:750;letter-spacing:-.03em}
+    .subtitle{color:var(--muted);margin:0}
+    .btn-primary-custom{background:var(--accent);border:0;color:white;border-radius:8px;padding:9px 14px;font-weight:600}
+    .btn-primary-custom:hover{background:var(--accent2)}
+    .btn-dark-custom{background:var(--bg-secondary);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 13px}
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+    .card-dark{background:var(--bg-secondary);border:1px solid var(--border);border-radius:11px;box-shadow:0 5px 18px rgba(0,0,0,.12)}
+    .kpi{padding:17px 18px;position:relative;overflow:hidden}.kpi-label{color:var(--muted);font-size:12px;font-weight:600}
+    .kpi-value{font-size:28px;font-weight:750;margin:7px 0 4px;letter-spacing:-.04em}
+    .trend{font-size:11px;font-weight:600}.up{color:var(--success)}.down{color:var(--danger)}
+    .spark{position:absolute;right:15px;bottom:17px;width:80px;height:30px;opacity:.7}
+    .grid-2{display:grid;grid-template-columns:1.55fr 1fr;gap:14px;margin-bottom:14px}
+    .card-head{padding:16px 18px 11px;display:flex;align-items:center;justify-content:space-between}
+    .card-title{font-weight:700;font-size:13px}.card-sub{color:var(--faint);font-size:11px;margin-top:3px}
+    .chart-wrap{height:270px;padding:0 14px 14px}.chart-wrap canvas{width:100%!important;height:100%!important}
+    .legend{display:flex;gap:16px;color:var(--muted);font-size:11px}.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px}
+    .filterbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.filter{background:var(--bg-secondary);border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:7px 10px;font-size:11px}
+    .filter.active{color:#c7c9ff;border-color:rgba(99,102,241,.45);background:rgba(99,102,241,.1)}
+    .table-card{overflow:hidden}.table-responsive{max-height:390px}.table{--bs-table-bg:transparent;--bs-table-color:var(--text);margin:0}
+    .table>thead{position:sticky;top:0;z-index:2}.table th{background:var(--bg-tertiary);color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:12px 15px;border-bottom:1px solid var(--border);white-space:nowrap}
+    .table td{padding:13px 15px;border-color:var(--border);vertical-align:middle;color:#cdd0d6;font-size:12px}
+    .table tbody tr:hover{background:rgba(255,255,255,.025)}
+    .claim{max-width:400px;color:#e1e3e7!important;font-weight:500}.source{color:var(--muted)}
+    .badge-status{border-radius:999px;padding:5px 8px;font-size:10px;font-weight:700}.verified{background:rgba(34,197,94,.12);color:#5ee28a}.false{background:rgba(239,68,68,.12);color:#ff7777}.review{background:rgba(245,158,11,.12);color:#ffc35d}
+    .confidence{font-weight:700}.high{color:var(--success)}.medium{color:var(--warning)}
+    .mini-list{padding:0 18px 16px}.mini-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)}.mini-row:last-child{border:0}
+    .rank{width:25px;height:25px;border-radius:7px;background:var(--bg-tertiary);display:grid;place-items:center;color:var(--muted);font-size:10px;font-weight:700}
+    .mini-main{min-width:0;flex:1}.mini-main strong{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mini-main span{display:block;color:var(--faint);font-size:10px;margin-top:3px}
+    .progress{height:5px;background:#303440}.progress-bar{background:var(--accent)}
+    .toast-box{position:fixed;right:20px;bottom:20px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:9px;padding:12px 15px;box-shadow:0 12px 30px rgba(0,0,0,.35);display:none;z-index:50;min-width:260px}
+    .mobile-menu{display:none}
+    @media(max-width:1100px){.app{grid-template-columns:70px 1fr}.sidebar{padding:18px 9px}.brand span,.brand small,.nav-link span,.nav-title{display:none}.brand{justify-content:center;padding:4px 0 22px}.nav-link{justify-content:center}.nav-link.active{padding-left:12px}.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:800px){.app{display:block}.sidebar{position:fixed;left:-260px;top:0;bottom:0;width:250px;z-index:100}.sidebar.open{left:0}.header{height:60px;padding:0 14px}.mobile-menu{display:grid}.header-title{display:none}main{padding:18px 14px}.grid-2{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}.search{max-width:none}.header-actions .icon-btn:nth-child(2){display:none}.page-head{align-items:flex-end}.page-head .actions{display:flex}.page-head .actions .btn-dark-custom{display:none}}
+    @media(max-width:520px){.kpi-grid{grid-template-columns:1fr 1fr;gap:8px}.kpi{padding:13px}.kpi-value{font-size:22px}.spark{display:none}.page-head h1{font-size:22px}.subtitle{font-size:11px}.header .search{display:none}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><i class="bi bi-eye"></i></div>
+      <div><span>TruthLens AI</span><small>TRUTH INTELLIGENCE</small></div>
+    </div>
+    <div class="nav-title">Workspace</div>
+    <a class="nav-link active" href="#"><i class="bi bi-grid-1x2-fill"></i><span>Overview</span></a>
+    <a class="nav-link" href="#"><i class="bi bi-search"></i><span>Claim Analyzer</span></a>
+    <a class="nav-link" href="#"><i class="bi bi-shield-check"></i><span>Verification Queue</span></a>
+    <a class="nav-link" href="#"><i class="bi bi-bar-chart-line"></i><span>Analytics</span></a>
+    <div class="nav-title">Intelligence</div>
+    <a class="nav-link" href="#"><i class="bi bi-database"></i><span>Evidence Library</span></a>
+    <a class="nav-link" href="#"><i class="bi bi-activity"></i><span>Live Monitor</span></a>
+    <a class="nav-link" href="#"><i class="bi bi-clock-history"></i><span>Analysis History</span></a>
+    <div class="nav-title">System</div>
+    <a class="nav-link" href="#"><i class="bi bi-gear"></i><span>Settings</span></a>
+    <div class="sidebar-bottom">
+      <a class="nav-link" href="#"><i class="bi bi-question-circle"></i><span>Help & Docs</span></a>
+      <a class="nav-link" href="#"><i class="bi bi-person-circle"></i><span>Account</span></a>
+    </div>
+  </aside>
+
+  <header class="header">
+    <button class="icon-btn mobile-menu" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+    <div class="header-title">Overview</div>
+    <div class="search"><i class="bi bi-search"></i><input id="globalSearch" placeholder="Search claims, sources, analyses..."></div>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="showToast('No new critical alerts')"><i class="bi bi-bell"></i></button>
+      <button class="icon-btn" onclick="showToast('Command palette ready')"><i class="bi bi-command"></i></button>
+      <div class="avatar">TV</div>
+    </div>
+  </header>
+
+  <main>
+    <div class="page-head">
+      <div><div class="eyebrow">Truth Intelligence Center</div><h1>Good afternoon, Admin.</h1><p class="subtitle">Monitor misinformation signals and verification activity in real time.</p></div>
+      <div class="actions d-flex gap-2">
+        <button class="btn-dark-custom" onclick="showToast('Dashboard export prepared')"><i class="bi bi-download me-1"></i> Export</button>
+        <button class="btn-primary-custom" onclick="showToast('Claim Analyzer opened')"><i class="bi bi-plus-lg me-1"></i> Analyze Claim</button>
+      </div>
+    </div>
+
+    <div class="filterbar">
+      <button class="filter active">All Signals</button><button class="filter">Last 24 hours <i class="bi bi-chevron-down ms-1"></i></button>
+      <button class="filter">All Sources <i class="bi bi-chevron-down ms-1"></i></button><button class="filter">All Verdicts <i class="bi bi-chevron-down ms-1"></i></button>
+      <button class="filter" onclick="showToast('Filters cleared')"><i class="bi bi-x-lg me-1"></i> Clear</button>
+    </div>
+
+    <section class="kpi-grid">
+      <div class="card-dark kpi"><div class="kpi-label">Claims Analyzed</div><div class="kpi-value">12,846</div><div class="trend up"><i class="bi bi-arrow-up"></i> 18.4% <span class="text-secondary">vs last week</span></div><svg class="spark" viewBox="0 0 80 30"><polyline points="0,25 10,22 20,24 30,14 40,18 50,10 60,14 70,5 80,8" fill="none" stroke="#22c55e" stroke-width="2"/></svg></div>
+      <div class="card-dark kpi"><div class="kpi-label">False / Misleading</div><div class="kpi-value">3,214</div><div class="trend down"><i class="bi bi-arrow-up"></i> 7.2% <span class="text-secondary">detected</span></div><svg class="spark" viewBox="0 0 80 30"><polyline points="0,23 10,19 20,21 30,15 40,18 50,11 60,13 70,7 80,4" fill="none" stroke="#ef4444" stroke-width="2"/></svg></div>
+      <div class="card-dark kpi"><div class="kpi-label">Avg. Confidence</div><div class="kpi-value">94.7%</div><div class="trend up"><i class="bi bi-arrow-up"></i> 2.1% <span class="text-secondary">model confidence</span></div><svg class="spark" viewBox="0 0 80 30"><polyline points="0,19 10,20 20,15 30,17 40,11 50,12 60,9 70,11 80,5" fill="none" stroke="#6366f1" stroke-width="2"/></svg></div>
+      <div class="card-dark kpi"><div class="kpi-label">Sources Cross-Checked</div><div class="kpi-value">48.2K</div><div class="trend up"><i class="bi bi-arrow-up"></i> 12.8% <span class="text-secondary">this month</span></div><svg class="spark" viewBox="0 0 80 30"><polyline points="0,25 10,21 20,22 30,18 40,16 50,14 60,12 70,7 80,4" fill="none" stroke="#3b82f6" stroke-width="2"/></svg></div>
+    </section>
+
+    <section class="grid-2">
+      <div class="card-dark">
+        <div class="card-head"><div><div class="card-title">Verification Activity</div><div class="card-sub">Claims processed over the last 30 days</div></div><div class="legend"><span><i class="dot" style="background:#6366f1"></i>Analyzed</span><span><i class="dot" style="background:#22c55e"></i>Verified</span><span><i class="dot" style="background:#ef4444"></i>False</span></div></div>
+        <div class="chart-wrap"><canvas id="activityChart"></canvas></div>
+      </div>
+      <div class="card-dark">
+        <div class="card-head"><div><div class="card-title">Verdict Distribution</div><div class="card-sub">Current analysis breakdown</div></div><button class="icon-btn" onclick="showToast('Verdict details opened')"><i class="bi bi-three-dots"></i></button></div>
+        <div class="chart-wrap"><canvas id="verdictChart"></canvas></div>
+      </div>
+    </section>
+
+    <section class="grid-2">
+      <div class="card-dark table-card">
+        <div class="card-head"><div><div class="card-title">Recent Claim Analysis</div><div class="card-sub">Latest verification activity</div></div><button class="btn-dark-custom" onclick="showToast('Opening full analysis history')">View all <i class="bi bi-arrow-right ms-1"></i></button></div>
+        <div class="table-responsive">
+          <table class="table" id="claimsTable">
+            <thead><tr><th>Claim</th><th>Source</th><th>Verdict</th><th>Confidence</th><th>Time</th></tr></thead>
+            <tbody>
+              <tr><td class="claim">"The new policy will eliminate income tax for everyone."</td><td class="source">Social Media</td><td><span class="badge-status false">FALSE</span></td><td class="confidence high">98.2%</td><td>2m ago</td></tr>
+              <tr><td class="claim">"Researchers announce breakthrough in battery efficiency."</td><td class="source">News Article</td><td><span class="badge-status verified">VERIFIED</span></td><td class="confidence high">96.7%</td><td>8m ago</td></tr>
+              <tr><td class="claim">"Major storm expected to hit western India this weekend."</td><td class="source">News Article</td><td><span class="badge-status review">REVIEW</span></td><td class="confidence medium">71.4%</td><td>14m ago</td></tr>
+              <tr><td class="claim">"This viral image was taken during yesterday's event."</td><td class="source">Social Media</td><td><span class="badge-status false">FALSE</span></td><td class="confidence high">99.1%</td><td>21m ago</td></tr>
+              <tr><td class="claim">"Central bank announces unchanged interest rates."</td><td class="source">Official Source</td><td><span class="badge-status verified">VERIFIED</span></td><td class="confidence high">99.6%</td><td>29m ago</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card-dark">
+        <div class="card-head"><div><div class="card-title">Top Misinformation Topics</div><div class="card-sub">Most flagged categories today</div></div></div>
+        <div class="mini-list">
+          <div class="mini-row"><div class="rank">01</div><div class="mini-main"><strong>Politics & Government</strong><span>842 flagged claims</span><div class="progress mt-2"><div class="progress-bar" style="width:88%"></div></div></div><b class="small">88%</b></div>
+          <div class="mini-row"><div class="rank">02</div><div class="mini-main"><strong>Health & Medicine</strong><span>617 flagged claims</span><div class="progress mt-2"><div class="progress-bar" style="width:72%"></div></div></div><b class="small">72%</b></div>
+          <div class="mini-row"><div class="rank">03</div><div class="mini-main"><strong>Technology</strong><span>491 flagged claims</span><div class="progress mt-2"><div class="progress-bar" style="width:59%"></div></div></div><b class="small">59%</b></div>
+          <div class="mini-row"><div class="rank">04</div><div class="mini-main"><strong>Climate & Environment</strong><span>328 flagged claims</span><div class="progress mt-2"><div class="progress-bar" style="width:42%"></div></div></div><b class="small">42%</b></div>
+          <div class="mini-row"><div class="rank">05</div><div class="mini-main"><strong>Finance</strong><span>246 flagged claims</span><div class="progress mt-2"><div class="progress-bar" style="width:31%"></div></div></div><b class="small">31%</b></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast-box" id="toastBox"><i class="bi bi-check-circle text-success me-2"></i><span id="toastText">Done</span></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+const labels=['Jul 23','Jul 25','Jul 27','Jul 29','Jul 31','Aug 2','Aug 4','Aug 6','Aug 8','Aug 10','Aug 12','Aug 14','Aug 16','Aug 18','Aug 20'];
+const gridColor='rgba(255,255,255,.06)';
+new Chart(document.getElementById('activityChart'),{
+ type:'line',data:{labels,datasets:[
+ {label:'Analyzed',data:[420,510,470,620,590,740,710,820,790,930,880,1040,990,1110,1190],borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,.08)',fill:true,tension:.38,pointRadius:0,borderWidth:2},
+ {label:'Verified',data:[300,360,345,430,410,520,500,590,550,650,630,710,690,780,830],borderColor:'#22c55e',fill:false,tension:.38,pointRadius:0,borderWidth:2},
+ {label:'False',data:[92,110,98,140,125,168,150,190,170,205,188,232,219,251,276],borderColor:'#ef4444',fill:false,tension:.38,pointRadius:0,borderWidth:2}
+ ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{color:'#686f7b',font:{size:9}}},y:{grid:{color:gridColor},ticks:{color:'#686f7b',font:{size:9}},beginAtZero:true}}}
+});
+new Chart(document.getElementById('verdictChart'),{
+ type:'doughnut',data:{labels:['Verified','False','Needs Review'],datasets:[{data:[57,25,18],backgroundColor:['#22c55e','#ef4444','#f59e0b'],borderColor:'#171a23',borderWidth:5}]},
+ options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{position:'bottom',labels:{color:'#9aa0a8',padding:16,font:{size:10},usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw}%`}}}}
+});
+function showToast(text){const b=document.getElementById('toastBox');document.getElementById('toastText').textContent=text;b.style.display='block';clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>b.style.display='none',3500)}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open')}
+document.getElementById('globalSearch').addEventListener('input',e=>{
+ const q=e.target.value.toLowerCase();
+ document.querySelectorAll('#claimsTable tbody tr').forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none');
+});
+document.querySelectorAll('.filter').forEach(b=>b.addEventListener('click',()=>{if(!b.innerText.includes('Clear')){document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));b.classList.add('active')}}));
+document.addEventListener('keydown',e=>{if(e.key==='/' && document.activeElement.tagName!=='INPUT'){e.preventDefault();document.getElementById('globalSearch').focus()}});
+</script>
+</body>
+</html>
