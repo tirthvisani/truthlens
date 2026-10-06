@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 import os
 import joblib
@@ -479,6 +479,38 @@ def admin_dashboard():
     total_admins = User.query.filter_by(role='admin').count()
     total_normal_users = User.query.filter_by(role='user').count()
 
+    total_analyses = AnalysisHistory.query.count()
+    total_real = AnalysisHistory.query.filter_by(prediction='Real').count()
+    total_fake = AnalysisHistory.query.filter_by(prediction='Fake').count()
+
+    avg_confidence_value = db.session.query(db.func.avg(AnalysisHistory.confidence)).scalar()
+    avg_confidence = round(float(avg_confidence_value or 0), 2)
+
+    recent_analyses = AnalysisHistory.query.order_by(
+        AnalysisHistory.date_created.desc()
+    ).limit(10).all()
+
+    activity_labels = []
+    activity_total = []
+    activity_real = []
+    activity_fake = []
+    today_date = datetime.utcnow().date()
+
+    for days_ago in range(6, -1, -1):
+        day = today_date - timedelta(days=days_ago)
+        day_start = datetime.combine(day, datetime.min.time())
+        day_end = day_start + timedelta(days=1)
+
+        daily_query = AnalysisHistory.query.filter(
+            AnalysisHistory.date_created >= day_start,
+            AnalysisHistory.date_created < day_end
+        )
+
+        activity_labels.append(day.strftime('%d %b'))
+        activity_total.append(daily_query.count())
+        activity_real.append(daily_query.filter(AnalysisHistory.prediction == 'Real').count())
+        activity_fake.append(daily_query.filter(AnalysisHistory.prediction == 'Fake').count())
+
     users = User.query.order_by(
         User.date_created.desc()
     ).all()
@@ -527,6 +559,15 @@ def admin_dashboard():
         total_users=total_users,
         total_admins=total_admins,
         total_normal_users=total_normal_users,
+        total_analyses=total_analyses,
+        total_real=total_real,
+        total_fake=total_fake,
+        avg_confidence=avg_confidence,
+        recent_analyses=recent_analyses,
+        activity_labels=activity_labels,
+        activity_total=activity_total,
+        activity_real=activity_real,
+        activity_fake=activity_fake,
         users=users,
         registration_labels=registration_labels,
         registration_counts=registration_counts
