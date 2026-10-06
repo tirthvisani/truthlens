@@ -76,6 +76,40 @@ class User(db.Model):
     def __repr__(self) -> str:
         return f"{self.id} - {self.email}"
 
+    analyses = db.relationship(
+        'AnalysisHistory',
+        backref='user',
+        lazy=True,
+        cascade='all, delete-orphan'
+    )
+
+
+# ---------------------------------------------------------
+# Analysis History Model
+# ---------------------------------------------------------
+
+class AnalysisHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('user.id', ondelete='CASCADE'),
+        nullable=False,
+        index=True
+    )
+    content = db.Column(db.Text, nullable=False)
+    prediction = db.Column(db.String(10), nullable=False)
+    label = db.Column(db.Integer, nullable=False)
+    confidence = db.Column(db.Float, nullable=False)
+    date_created = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+        index=True
+    )
+
+    def __repr__(self) -> str:
+        return f"{self.id} - user:{self.user_id} - {self.prediction}"
+
 # with app.app_context():
 
 #     admin = User.query.filter_by(
@@ -298,6 +332,54 @@ def home():
 
 
 # ---------------------------------------------------------
+# Analysis History
+# ---------------------------------------------------------
+
+@app.route("/history")
+@login_required
+def history():
+    analyses = AnalysisHistory.query.filter_by(
+        user_id=session['user_id']
+    ).order_by(
+        AnalysisHistory.date_created.desc()
+    ).all()
+
+    return render_template(
+        'history.html',
+        analyses=analyses,
+        user_name=session.get('user_name')
+    )
+
+
+@app.route("/history/delete/<int:analysis_id>", methods=['POST'])
+@login_required
+def delete_history(analysis_id):
+    analysis = AnalysisHistory.query.filter_by(
+        id=analysis_id,
+        user_id=session['user_id']
+    ).first_or_404()
+
+    db.session.delete(analysis)
+    db.session.commit()
+
+    flash("History entry deleted.", "success")
+    return redirect(url_for('history'))
+
+
+@app.route("/history/clear", methods=['POST'])
+@login_required
+def clear_history():
+    AnalysisHistory.query.filter_by(
+        user_id=session['user_id']
+    ).delete(synchronize_session=False)
+
+    db.session.commit()
+
+    flash("Analysis history cleared.", "success")
+    return redirect(url_for('history'))
+
+
+# ---------------------------------------------------------
 # TruthLens AI - Step 5: Prediction API
 # ---------------------------------------------------------
 
@@ -337,12 +419,34 @@ def analyze_news():
         confidence = float(probabilities[predicted_index])
 
         verdict = "Fake" if predicted_label == 1 else "Real"
+        confidence_percent = round(confidence * 100, 2)
+
+        history_saved = False
+        history_id = None
+
+        try:
+            analysis = AnalysisHistory(
+                user_id=session['user_id'],
+                content=content,
+                prediction=verdict,
+                label=predicted_label,
+                confidence=confidence_percent
+            )
+            db.session.add(analysis)
+            db.session.commit()
+            history_saved = True
+            history_id = analysis.id
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("TruthLens history save failed")
 
         return jsonify({
             "success": True,
             "prediction": verdict,
             "label": predicted_label,
-            "confidence": round(confidence * 100, 2),
+            "confidence": confidence_percent,
+            "history_saved": history_saved,
+            "history_id": history_id,
             "message": (
                 "The model found text patterns associated with potentially fake news."
                 if predicted_label == 1
