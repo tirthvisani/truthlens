@@ -138,6 +138,7 @@ footer{border-top:1px solid var(--line);padding:27px 0;color:var(--faint);font-s
    <a class="nav-link" href="#analyze">Analyze</a>
    <a class="nav-link" href="#technology">Technology</a>
    <a class="nav-link" href="#how">How it works</a>
+   <a class="nav-link" href="{{ url_for('history') }}">History</a>
   </div>
   <div class="auth ms-3 d-flex gap-2">
    <a class="btn btn-ghost" href="{{ url_for('logout') }}">Log out</a>
@@ -194,6 +195,9 @@ footer{border-top:1px solid var(--line);padding:27px 0;color:var(--faint);font-s
       <span class="confidence" id="confidenceText"></span>
      </div>
      <div class="result-note" id="resultDisclaimer"></div>
+     <div class="mt-3">
+      <a class="btn btn-ghost" href="{{ url_for('history') }}"><i class="bi bi-clock-history me-1"></i>View analysis history</a>
+     </div>
     </div>
    </div>
   </div>
@@ -329,7 +333,7 @@ async function analyze(){
 
   void result.offsetWidth;
   result.classList.add('show');
-  toast('Analysis completed');
+  toast(data.history_saved ? 'Analysis completed and saved to history' : 'Analysis completed, but history could not be saved');
  }catch(error){
   toast(error.message || 'Could not analyze this text');
  }finally{
