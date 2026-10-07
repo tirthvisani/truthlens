@@ -84,17 +84,9 @@
     <div class="nav-title">Workspace</div>
     <a class="nav-link active" href="#"><i class="bi bi-grid-1x2-fill"></i><span>Overview</span></a>
     <a class="nav-link" href="{{ url_for('home') }}#analyze"><i class="bi bi-search"></i><span>Claim Analyzer</span></a>
-    <a class="nav-link" href="#"><i class="bi bi-shield-check"></i><span>Verification Queue</span></a>
     <a class="nav-link" href="#userReport"><i class="bi bi-bar-chart-line"></i><span>User Reports</span></a>
-    <div class="nav-title">Intelligence</div>
-    <a class="nav-link" href="#"><i class="bi bi-database"></i><span>Evidence Library</span></a>
-    <a class="nav-link" href="#"><i class="bi bi-activity"></i><span>Live Monitor</span></a>
     <a class="nav-link" href="#analysisHistory"><i class="bi bi-clock-history"></i><span>Analysis History</span></a>
-    <div class="nav-title">System</div>
-    <a class="nav-link" href="#"><i class="bi bi-gear"></i><span>Settings</span></a>
     <div class="sidebar-bottom">
-      <a class="nav-link" href="#"><i class="bi bi-question-circle"></i><span>Help & Docs</span></a>
-      <a class="nav-link" href="#"><i class="bi bi-person-circle"></i><span>Account</span></a>
     </div>
   </aside>
 
@@ -103,26 +95,18 @@
     <!-- <div class="header-title">Overview</div>
     <div class="search"><i class="bi bi-search"></i><input id="globalSearch" placeholder="Search claims, sources, analyses..."></div> -->
     <div class="header-actions">
-      <button class="icon-btn" onclick="showToast('No new critical alerts')"><i class="bi bi-bell"></i></button>
-      <button class="icon-btn" onclick="showToast('Command palette ready')"><i class="bi bi-command"></i></button>
       <div class="avatar">TV</div>
     </div>
   </header>
 
   <main>
     <div class="page-head">
-      <div><div class="eyebrow">Truth Intelligence Center</div><h1>Good afternoon, Admin.</h1><p class="subtitle">Monitor misinformation signals and verification activity in real time.</p></div>
+      <div><div class="eyebrow">TruthLens Administration</div><h1>Admin Dashboard</h1><p class="subtitle">Review users, stored model predictions, confidence scores, and recent analysis activity.</p></div>
       <div class="actions d-flex gap-2">
-        <button class="btn-dark-custom" onclick="showToast('Dashboard export prepared')"><i class="bi bi-download me-1"></i> Export</button>
         <a class="btn-primary-custom text-decoration-none" href="{{ url_for('home') }}#analyze"><i class="bi bi-plus-lg me-1"></i> Analyze Claim</a>
       </div>
     </div>
 
-    <div class="filterbar">
-      <button class="filter active">All Signals</button><button class="filter">Last 24 hours <i class="bi bi-chevron-down ms-1"></i></button>
-      <button class="filter">All Sources <i class="bi bi-chevron-down ms-1"></i></button><button class="filter">All Verdicts <i class="bi bi-chevron-down ms-1"></i></button>
-      <button class="filter" onclick="showToast('Filters cleared')"><i class="bi bi-x-lg me-1"></i> Clear</button>
-    </div>
 
     <section class="kpi-grid" id="analysisReport">
       <div class="card-dark kpi">
