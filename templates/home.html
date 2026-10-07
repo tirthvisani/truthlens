@@ -71,9 +71,17 @@ h2{font-size:clamp(32px,4vw,52px);line-height:1;letter-spacing:-.05em;font-weigh
 .analyzer:hover{transform:translateY(-3px);box-shadow:0 35px 80px rgba(0,0,0,.38)}
 .analyzer-inner{background:#0a0d13;border:1px solid rgba(255,255,255,.055);border-radius:12px;padding:27px}
 .input-label{font-size:11px;font-weight:700;color:#c8cbd3;margin-bottom:9px}
-textarea.form-control{background:#141821;border:1px solid var(--line);color:#fff;border-radius:9px;min-height:130px;resize:none;font-size:13px;padding:14px}
-textarea.form-control::placeholder{color:#5f6673}
-textarea.form-control:focus{background:#141821;color:#fff;border-color:rgba(99,102,241,.65);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+.input-mode{display:flex;gap:8px;margin-bottom:15px}
+.mode-btn{border:1px solid var(--line);background:rgba(255,255,255,.035);color:var(--muted);border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700}
+.mode-btn.active{background:rgba(99,102,241,.14);border-color:rgba(99,102,241,.4);color:#c7c9ff}
+textarea.form-control,.url-input{background:#141821;border:1px solid var(--line);color:#fff;border-radius:9px;font-size:13px;padding:14px}
+textarea.form-control{min-height:130px;resize:none}
+textarea.form-control::placeholder,.url-input::placeholder{color:#5f6673}
+textarea.form-control:focus,.url-input:focus{background:#141821;color:#fff;border-color:rgba(99,102,241,.65);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+.url-input{width:100%;min-height:48px;outline:0}
+.url-panel{display:none}
+.url-panel.active{display:block}
+.text-panel.hidden{display:none}
 .analyzer-foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;color:var(--faint);font-size:10px}
 .demo-result{display:none;margin-top:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.025);border-radius:9px;padding:16px}.demo-result.show{display:block;animation:resultIn .45s var(--spring) both}
 .demo-result.real{border-color:rgba(34,197,94,.25);background:rgba(34,197,94,.055)}
@@ -180,10 +188,23 @@ footer{border-top:1px solid var(--line);padding:27px 0;color:var(--faint);font-s
   <p class="lead reveal">Paste a headline, social-media statement, or news article and let the trained TruthLens model estimate whether its text patterns look more like real or fake news.</p>
   <div class="analyzer reveal">
    <div class="analyzer-inner">
-    <label class="input-label" for="claimInput">WHAT DO YOU WANT TO VERIFY?</label>
-    <textarea id="claimInput" class="form-control" placeholder="Paste a claim here… e.g. “This new technology was officially approved worldwide.”"></textarea>
+    <label class="input-label">WHAT DO YOU WANT TO VERIFY?</label>
+    <div class="input-mode" role="tablist" aria-label="Analysis input type">
+     <button class="mode-btn active" id="textModeBtn" type="button" onclick="setAnalyzeMode('text')"><i class="bi bi-card-text me-1"></i>Paste Text</button>
+     <button class="mode-btn" id="urlModeBtn" type="button" onclick="setAnalyzeMode('url')"><i class="bi bi-link-45deg me-1"></i>News URL</button>
+    </div>
+
+    <div class="text-panel" id="textPanel">
+     <textarea id="claimInput" class="form-control" placeholder="Paste a claim here… e.g. “This new technology was officially approved worldwide.”"></textarea>
+    </div>
+
+    <div class="url-panel" id="urlPanel">
+     <input id="urlInput" class="url-input" type="url" placeholder="https://example.com/news/article">
+     <div class="result-note mt-2">TruthLens will extract readable article text from the page and analyze it with the same trained model.</div>
+    </div>
+
     <div class="analyzer-foot">
-     <span><i class="bi bi-shield-check me-1"></i> AI-assisted · evidence-focused · confidence-aware</span>
+     <span><i class="bi bi-shield-check me-1"></i> AI-assisted · text or URL · confidence-aware</span>
      <button class="btn-main" id="analyzeBtn" onclick="analyze()"><i class="bi bi-stars me-2"></i>Run Analysis</button>
     </div>
     <div class="demo-result" id="result" aria-live="polite">
@@ -289,22 +310,54 @@ function animateCounter(el){
 
 function scrollToId(id){document.getElementById(id)?.scrollIntoView({behavior:reduced?'auto':'smooth'})}
 
-async function analyze(){
- const input=document.getElementById('claimInput');
- const button=document.getElementById('analyzeBtn');
- const content=input.value.trim();
+let analyzeMode='text';
 
- if(!content){input.focus();toast('Paste a claim first');return}
- if(content.length<20){input.focus();toast('Enter at least 20 characters');return}
+function setAnalyzeMode(mode){
+ analyzeMode=mode;
+ const textMode=mode==='text';
+
+ document.getElementById('textModeBtn').classList.toggle('active',textMode);
+ document.getElementById('urlModeBtn').classList.toggle('active',!textMode);
+ document.getElementById('textPanel').classList.toggle('hidden',!textMode);
+ document.getElementById('urlPanel').classList.toggle('active',!textMode);
+
+ const result=document.getElementById('result');
+ result.classList.remove('show');
+}
+
+async function analyze(){
+ const button=document.getElementById('analyzeBtn');
+ let endpoint='/api/analyze';
+ let payload={};
+
+ if(analyzeMode==='url'){
+  const input=document.getElementById('urlInput');
+  const url=input.value.trim();
+
+  if(!url){input.focus();toast('Paste a news URL first');return}
+
+  endpoint='/api/analyze-url';
+  payload={url};
+ }else{
+  const input=document.getElementById('claimInput');
+  const content=input.value.trim();
+
+  if(!content){input.focus();toast('Paste a claim first');return}
+  if(content.length<20){input.focus();toast('Enter at least 20 characters');return}
+
+  payload={content};
+ }
 
  button.disabled=true;
- button.innerHTML='<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Analyzing...';
+ button.innerHTML=analyzeMode==='url'
+  ? '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Extracting & analyzing...'
+  : '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Analyzing...';
 
  try{
-  const response=await fetch('/api/analyze',{
+  const response=await fetch(endpoint,{
    method:'POST',
    headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({content})
+   body:JSON.stringify(payload)
   });
 
   const data=await response.json();
@@ -328,14 +381,19 @@ async function analyze(){
    : '<i class="bi bi-check-circle-fill me-1"></i>LIKELY REAL';
 
   document.getElementById('confidenceText').textContent=data.confidence.toFixed(2)+'% confidence';
-  document.getElementById('resultMessage').textContent=data.message;
+
+  const sourceNote=data.source_url
+   ? ' Article extracted from '+new URL(data.source_url).hostname+'.'
+   : '';
+
+  document.getElementById('resultMessage').textContent=data.message+sourceNote;
   document.getElementById('resultDisclaimer').textContent=data.disclaimer;
 
   void result.offsetWidth;
   result.classList.add('show');
   toast(data.history_saved ? 'Analysis completed and saved to history' : 'Analysis completed, but history could not be saved');
  }catch(error){
-  toast(error.message || 'Could not analyze this text');
+  toast(error.message || 'Could not complete the analysis');
  }finally{
   button.disabled=false;
   button.innerHTML='<i class="bi bi-stars me-2"></i>Run Analysis';
