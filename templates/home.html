@@ -161,23 +161,23 @@ footer{border-top:1px solid var(--line);padding:27px 0;color:var(--faint);font-s
   <div class="hero-content">
    <div class="eyebrow reveal"><span class="pulse-dot"></span> AI-powered truth intelligence</div>
    <h1 class="reveal">Before you <span class="gradient">believe it.</span><br>Put it through a lens.</h1>
-   <p class="hero-copy reveal">TruthLens AI helps you investigate online claims by analyzing their context, checking evidence, and showing how confident the system is in its verdict.</p>
+   <p class="hero-copy reveal">TruthLens AI helps you assess online claims by analyzing their language patterns and showing how confident the trained model is in its prediction.</p>
    <div class="hero-actions reveal">
     <button class="btn-main" onclick="scrollToId('analyze')"><i class="bi bi-search me-2"></i>Analyze a Claim</button>
     <button class="btn-ghost" onclick="scrollToId('how')"><i class="bi bi-arrow-down-right me-2"></i>See how it works</button>
    </div>
    <div class="stats reveal">
-    <div class="stat"><strong data-count="12846">0</strong><span>claims analyzed</span></div>
-    <div class="stat"><strong data-count="48200">0</strong><span>sources cross-checked</span></div>
-    <div class="stat"><strong data-count="94.7" data-decimal="1">0</strong><span>avg. confidence %</span></div>
+    <div class="stat"><strong data-count="99.77" data-decimal="2">0</strong><span>held-out test accuracy %</span></div>
+    <div class="stat"><strong data-count="99.54" data-decimal="2">0</strong><span>fake-class recall %</span></div>
+    <div class="stat"><strong data-count="7731">0</strong><span>held-out test articles</span></div>
    </div>
   </div>
  </div>
  <div class="hero-visual" aria-hidden="true">
   <div class="orbit"><i></i></div><div class="lens"><div class="scan"></div><div class="core"></div></div>
-  <div class="signal a"><strong>CLAIM DETECTED</strong>Natural language analysis</div>
-  <div class="signal b"><strong>EVIDENCE MATCH</strong>7 relevant sources</div>
-  <div class="signal c"><strong>CONFIDENCE 94.7%</strong>High confidence signal</div>
+  <div class="signal a"><strong>TEXT RECEIVED</strong>Language-pattern analysis</div>
+  <div class="signal b"><strong>TF-IDF FEATURES</strong>Model-ready representation</div>
+  <div class="signal c"><strong>CONFIDENCE SCORE</strong>Prediction certainty signal</div>
  </div>
 </header>
 
@@ -204,7 +204,7 @@ footer{border-top:1px solid var(--line);padding:27px 0;color:var(--faint);font-s
     </div>
 
     <div class="analyzer-foot">
-     <span><i class="bi bi-shield-check me-1"></i> AI-assisted · text or URL · confidence-aware</span>
+     <span><i class="bi bi-shield-check me-1"></i> ML-assisted · text or URL · confidence-aware</span>
      <button class="btn-main" id="analyzeBtn" onclick="analyze()"><i class="bi bi-stars me-2"></i>Run Analysis</button>
     </div>
     <div class="demo-result" id="result" aria-live="polite">
@@ -229,9 +229,9 @@ footer{border-top:1px solid var(--line);padding:27px 0;color:var(--faint);font-s
  <div class="container">
   <div class="section-label reveal">The intelligence behind the lens</div>
   <h2 class="reveal">More than a<br><span class="gradient">yes or no.</span></h2>
-  <p class="lead reveal">The user experience is built around understanding <em>why</em> a claim receives its result, not simply displaying a verdict.</p>
+  <p class="lead reveal">TruthLens converts submitted text into learned statistical features, classifies it as likely real or fake, and reports the model confidence alongside the result.</p>
   <div class="cards stagger">
-   <article class="card-ui reveal"><div class="icon-box"><i class="bi bi-cpu"></i></div><h3>Claim Understanding</h3><p>Identify the core factual statement and separate it from opinion, speculation, or surrounding context.</p></article>
+   <article class="card-ui reveal"><div class="icon-box"><i class="bi bi-cpu"></i></div><h3>Text Feature Analysis</h3><p>Analyze the submitted wording using statistical text features learned from the training dataset.</p></article>
    <article class="card-ui reveal"><div class="icon-box"><i class="bi bi-diagram-3"></i></div><h3>TF-IDF Features</h3><p>Convert submitted text using the same TF-IDF vocabulary learned during training so the classifier receives consistent features.</p></article>
    <article class="card-ui reveal"><div class="icon-box"><i class="bi bi-graph-up-arrow"></i></div><h3>Confidence Scoring</h3><p>Communicate uncertainty instead of pretending every prediction is absolute. Strong signals get stronger confidence.</p></article>
   </div>
@@ -252,10 +252,10 @@ footer{border-top:1px solid var(--line);padding:27px 0;color:var(--faint);font-s
 
 <section class="section dark">
  <div class="container">
-  <div class="section-label reveal">TruthLens in motion</div>
-  <h2 class="reveal">A live look at the<br><span class="gradient">verification pulse.</span></h2>
+  <div class="section-label reveal">How results appear</div>
+  <h2 class="reveal">A quick look at<br><span class="gradient">prediction outputs.</span></h2>
   <div class="live-panel reveal">
-   <div class="live-head"><div class="live-title">Recent analysis signals</div><div class="live-status"><span class="pulse-dot"></span> SYSTEM ACTIVE</div></div>
+   <div class="live-head"><div class="live-title">Illustrative result examples</div><div class="live-status"><span class="pulse-dot"></span> MODEL OUTPUT</div></div>
    <div class="feed">
     <div class="feed-row"><span class="source">Social Media</span><span class="claim">“The new policy will eliminate income tax for everyone.”</span><span class="tag false">FALSE</span><span class="score">98.2%</span></div>
     <div class="feed-row"><span class="source">News</span><span class="claim">“Researchers announce breakthrough in battery efficiency.”</span><span class="tag verified">VERIFIED</span><span class="score">96.7%</span></div>
@@ -270,12 +270,12 @@ footer{border-top:1px solid var(--line);padding:27px 0;color:var(--faint);font-s
  <div class="container">
   <div class="section-label reveal">The next time something looks unbelievable</div>
   <h2 class="reveal">Put a lens on it.</h2>
-  <p class="lead reveal">Pause. Investigate. Understand. TruthLens AI is designed to help users make more informed decisions in an internet full of uncertain information.</p>
+  <p class="lead reveal">Use TruthLens as an initial screening tool, then confirm important claims with trustworthy reporting and primary sources.</p>
   <button class="btn-main reveal" onclick="scrollToId('analyze')">Start verifying <i class="bi bi-arrow-right ms-2"></i></button>
  </div>
 </section>
 
-<footer><div class="container d-flex justify-content-between flex-wrap gap-2"><span>© 2026 TruthLens AI</span><span>AI-assisted verification · Human judgment remains essential.</span></div></footer>
+<footer><div class="container d-flex justify-content-between flex-wrap gap-2"><span>© 2026 TruthLens AI</span><span>Machine-learning classification · Human verification remains essential.</span></div></footer>
 
 <script>
 const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
