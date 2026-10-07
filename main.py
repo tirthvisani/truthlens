@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 import ipaddress
+import re
 import os
 import socket
 
@@ -17,6 +18,13 @@ from bs4 import BeautifulSoup
 app = Flask(__name__)
 
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-only-secret")
+app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+MAX_ANALYSIS_CHARS = 50000
+MAX_URL_CHARS = 2048
+
 # ---------------------------------------------------------
 # Flask configuration
 # ---------------------------------------------------------
@@ -205,6 +213,18 @@ def register():
         # Check empty fields
         if not name or not email or not password:
             flash("All fields are required.", "danger")
+            return render_template('register.html')
+
+        if len(name) > 100:
+            flash("Name must be 100 characters or fewer.", "danger")
+            return render_template('register.html')
+
+        if len(email) > 150 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+            flash("Please enter a valid email address.", "danger")
+            return render_template('register.html')
+
+        if len(password) > 128:
+            flash("Password must be 128 characters or fewer.", "danger")
             return render_template('register.html')
 
         # Check password
@@ -443,8 +463,14 @@ def predict_and_save(content, history_content=None):
 def validate_public_url(url):
     parsed = urlparse(url)
 
+    if len(url) > MAX_URL_CHARS:
+        raise ValueError("The news URL is too long.")
+
     if parsed.scheme not in ("http", "https") or not parsed.hostname:
         raise ValueError("Please enter a valid http:// or https:// news URL.")
+
+    if parsed.username or parsed.password:
+        raise ValueError("URLs containing login credentials are not allowed.")
 
     hostname = parsed.hostname.lower()
 
@@ -452,7 +478,8 @@ def validate_public_url(url):
         raise ValueError("Local or private URLs are not allowed.")
 
     try:
-        addresses = socket.getaddrinfo(hostname, parsed.port or 443)
+        default_port = 443 if parsed.scheme == "https" else 80
+        addresses = socket.getaddrinfo(hostname, parsed.port or default_port)
     except socket.gaierror as exc:
         raise ValueError("The website address could not be resolved.") from exc
 
@@ -576,6 +603,12 @@ def analyze_news():
         return jsonify({
             "success": False,
             "error": "Please enter at least 20 characters for a more meaningful analysis."
+        }), 400
+
+    if len(content) > MAX_ANALYSIS_CHARS:
+        return jsonify({
+            "success": False,
+            "error": f"Please keep the submitted text under {MAX_ANALYSIS_CHARS:,} characters."
         }), 400
 
     try:
