@@ -4,8 +4,14 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from datetime import datetime, timedelta
 from pathlib import Path
+from urllib.parse import urljoin, urlparse
+import ipaddress
 import os
+import socket
+
 import joblib
+import requests
+from bs4 import BeautifulSoup
 
 
 app = Flask(__name__)
@@ -380,7 +386,170 @@ def clear_history():
 
 
 # ---------------------------------------------------------
-# TruthLens AI - Step 5: Prediction API
+# TruthLens Analysis Helpers
+# ---------------------------------------------------------
+
+def predict_and_save(content, history_content=None):
+    features = truthlens_vectorizer.transform([content])
+    predicted_label = int(truthlens_model.predict(features)[0])
+
+    probabilities = truthlens_model.predict_proba(features)[0]
+    classes = list(truthlens_model.classes_)
+    predicted_index = classes.index(predicted_label)
+    confidence = float(probabilities[predicted_index])
+
+    verdict = "Fake" if predicted_label == 1 else "Real"
+    confidence_percent = round(confidence * 100, 2)
+
+    history_saved = False
+    history_id = None
+
+    try:
+        analysis = AnalysisHistory(
+            user_id=session['user_id'],
+            content=history_content or content,
+            prediction=verdict,
+            label=predicted_label,
+            confidence=confidence_percent
+        )
+        db.session.add(analysis)
+        db.session.commit()
+        history_saved = True
+        history_id = analysis.id
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("TruthLens history save failed")
+
+    return {
+        "success": True,
+        "prediction": verdict,
+        "label": predicted_label,
+        "confidence": confidence_percent,
+        "history_saved": history_saved,
+        "history_id": history_id,
+        "message": (
+            "The model found text patterns associated with potentially fake news."
+            if predicted_label == 1
+            else
+            "The model found text patterns associated with real news."
+        ),
+        "disclaimer": (
+            "This is a machine-learning prediction based on language patterns, "
+            "not a definitive fact-check. Verify important claims with reliable sources."
+        )
+    }
+
+
+def validate_public_url(url):
+    parsed = urlparse(url)
+
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise ValueError("Please enter a valid http:// or https:// news URL.")
+
+    hostname = parsed.hostname.lower()
+
+    if hostname in {"localhost", "localhost.localdomain"}:
+        raise ValueError("Local or private URLs are not allowed.")
+
+    try:
+        addresses = socket.getaddrinfo(hostname, parsed.port or 443)
+    except socket.gaierror as exc:
+        raise ValueError("The website address could not be resolved.") from exc
+
+    for address in addresses:
+        ip_text = address[4][0].split("%")[0]
+        ip = ipaddress.ip_address(ip_text)
+
+        if not ip.is_global:
+            raise ValueError("Local or private network URLs are not allowed.")
+
+    return parsed
+
+
+def extract_article_from_url(url):
+    current_url = url
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (compatible; TruthLensAI/1.0; "
+            "+https://github.com/tirthvisani/truthlens)"
+        )
+    }
+
+    for _ in range(4):
+        validate_public_url(current_url)
+
+        response = requests.get(
+            current_url,
+            headers=headers,
+            timeout=(5, 10),
+            allow_redirects=False,
+            stream=True
+        )
+
+        if response.status_code in (301, 302, 303, 307, 308):
+            location = response.headers.get("Location")
+
+            if not location:
+                raise ValueError("The news website returned an invalid redirect.")
+
+            current_url = urljoin(current_url, location)
+            continue
+
+        response.raise_for_status()
+
+        content_type = response.headers.get("Content-Type", "").lower()
+
+        if "text/html" not in content_type:
+            raise ValueError("The URL does not appear to contain a readable HTML article.")
+
+        max_bytes = 2 * 1024 * 1024
+        chunks = []
+        total_bytes = 0
+
+        for chunk in response.iter_content(chunk_size=16384):
+            if not chunk:
+                continue
+
+            total_bytes += len(chunk)
+
+            if total_bytes > max_bytes:
+                raise ValueError("The webpage is too large to analyze safely.")
+
+            chunks.append(chunk)
+
+        html = b"".join(chunks)
+        soup = BeautifulSoup(html, "html.parser")
+
+        for tag in soup([
+            "script", "style", "noscript", "nav", "footer",
+            "header", "aside", "form", "svg", "iframe"
+        ]):
+            tag.decompose()
+
+        article = soup.find("article") or soup.find("main") or soup
+        paragraphs = []
+
+        for paragraph in article.find_all("p"):
+            text = " ".join(paragraph.get_text(" ", strip=True).split())
+
+            if len(text) >= 40:
+                paragraphs.append(text)
+
+        extracted_text = "\n\n".join(paragraphs).strip()
+
+        if len(extracted_text) < 200:
+            raise ValueError(
+                "TruthLens could not extract enough article text from this page. "
+                "Try pasting the article text instead."
+            )
+
+        return extracted_text[:50000], current_url
+
+    raise ValueError("The news URL redirected too many times.")
+
+
+# ---------------------------------------------------------
+# TruthLens AI - Prediction APIs
 # ---------------------------------------------------------
 
 @app.route("/api/analyze", methods=["POST"])
@@ -410,60 +579,63 @@ def analyze_news():
         }), 400
 
     try:
-        features = truthlens_vectorizer.transform([content])
-        predicted_label = int(truthlens_model.predict(features)[0])
-
-        probabilities = truthlens_model.predict_proba(features)[0]
-        classes = list(truthlens_model.classes_)
-        predicted_index = classes.index(predicted_label)
-        confidence = float(probabilities[predicted_index])
-
-        verdict = "Fake" if predicted_label == 1 else "Real"
-        confidence_percent = round(confidence * 100, 2)
-
-        history_saved = False
-        history_id = None
-
-        try:
-            analysis = AnalysisHistory(
-                user_id=session['user_id'],
-                content=content,
-                prediction=verdict,
-                label=predicted_label,
-                confidence=confidence_percent
-            )
-            db.session.add(analysis)
-            db.session.commit()
-            history_saved = True
-            history_id = analysis.id
-        except Exception:
-            db.session.rollback()
-            app.logger.exception("TruthLens history save failed")
-
-        return jsonify({
-            "success": True,
-            "prediction": verdict,
-            "label": predicted_label,
-            "confidence": confidence_percent,
-            "history_saved": history_saved,
-            "history_id": history_id,
-            "message": (
-                "The model found text patterns associated with potentially fake news."
-                if predicted_label == 1
-                else
-                "The model found text patterns associated with real news."
-            ),
-            "disclaimer": (
-                "This is a machine-learning prediction based on language patterns, "
-                "not a definitive fact-check. Verify important claims with reliable sources."
-            )
-        })
-
-    except Exception as exc:
+        return jsonify(predict_and_save(content))
+    except Exception:
         app.logger.exception("TruthLens prediction failed")
         return jsonify({
             "success": False,
             "error": "The analysis could not be completed."
+        }), 500
+
+
+@app.route("/api/analyze-url", methods=["POST"])
+@login_required
+def analyze_news_url():
+
+    if truthlens_model is None or truthlens_vectorizer is None:
+        return jsonify({
+            "success": False,
+            "error": "The TruthLens ML model is not available.",
+            "details": model_load_error
+        }), 503
+
+    data = request.get_json(silent=True) or {}
+    news_url = str(data.get("url", "")).strip()
+
+    if not news_url:
+        return jsonify({
+            "success": False,
+            "error": "Please enter a news article URL."
+        }), 400
+
+    try:
+        article_text, final_url = extract_article_from_url(news_url)
+
+        result = predict_and_save(
+            article_text,
+            history_content=f"Source URL: {final_url}\n\n{article_text}"
+        )
+        result["source_url"] = final_url
+        result["extracted_characters"] = len(article_text)
+
+        return jsonify(result)
+
+    except ValueError as exc:
+        return jsonify({
+            "success": False,
+            "error": str(exc)
+        }), 400
+    except requests.RequestException:
+        app.logger.exception("TruthLens URL request failed")
+        return jsonify({
+            "success": False,
+            "error": "TruthLens could not retrieve that webpage. Try another URL or paste the article text."
+        }), 502
+    except Exception:
+        app.logger.exception("TruthLens URL analysis failed")
+        return jsonify({
+            "success": False,
+            "error": "The URL analysis could not be completed."
         }), 500
 
 
