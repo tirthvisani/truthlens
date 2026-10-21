@@ -9,6 +9,7 @@ import ipaddress
 import re
 import os
 import socket
+import secrets
 
 import joblib
 import requests
@@ -155,6 +156,12 @@ def login_required(function):
         if 'user_id' not in session:
             return redirect(url_for('login'))
 
+        # Deleting an account must also revoke its existing login session.
+        if db.session.get(User, session['user_id']) is None:
+            session.clear()
+            flash("This account is no longer available. Please log in.", "warning")
+            return redirect(url_for('login'))
+
         return function(*args, **kwargs)
 
     return wrapper
@@ -171,7 +178,7 @@ def admin_required(function):
         if 'user_id' not in session:
             return redirect(url_for('login'))
 
-        user = User.query.get(session['user_id'])
+        user = db.session.get(User, session['user_id'])
 
         if not user or user.role != 'admin':
             flash("Access denied. Admin privileges required.", "danger")
@@ -720,6 +727,16 @@ def admin_dashboard():
         User.date_created.desc()
     ).all()
 
+    # One grouped query provides every user's activity count (avoids N+1 queries).
+    analysis_counts = dict(
+        db.session.query(AnalysisHistory.user_id, db.func.count(AnalysisHistory.id))
+        .group_by(AnalysisHistory.user_id)
+        .all()
+    )
+
+    if 'admin_csrf_token' not in session:
+        session['admin_csrf_token'] = secrets.token_urlsafe(32)
+
     # ---------------------------------------------------------
     # User Report Data
     # ---------------------------------------------------------
@@ -774,31 +791,57 @@ def admin_dashboard():
         activity_real=activity_real,
         activity_fake=activity_fake,
         users=users,
+        analysis_counts=analysis_counts,
+        csrf_token=session['admin_csrf_token'],
         registration_labels=registration_labels,
         registration_counts=registration_counts
     )
 
 # ---------------------------------------------------------
-# Delete User
+# Delete User (admin only)
 # ---------------------------------------------------------
 
 @app.route("/admin/users/delete/<int:user_id>", methods=['POST'])
 @admin_required
 def delete_user(user_id):
+    dashboard_url = url_for('admin_dashboard') + '#userManagement'
 
-    user = User.query.get_or_404(user_id)
+    # Validate the session-bound token before making any database changes.
+    expected_token = session.get('admin_csrf_token')
+    received_token = request.form.get('csrf_token', '')
+    if not expected_token or not secrets.compare_digest(expected_token, received_token):
+        flash("Invalid delete request. Refresh the dashboard and try again.", "danger")
+        return redirect(dashboard_url)
 
-    # Prevent admin from deleting themselves
+    user = db.session.get(User, user_id)
+    if user is None:
+        flash("This user no longer exists.", "warning")
+        return redirect(dashboard_url)
+
     if user.id == session.get('user_id'):
-        flash("You cannot delete your own admin account.", "danger")
-        return redirect(url_for('admin_dashboard'))
+        flash("You cannot delete your own account.", "danger")
+        return redirect(dashboard_url)
 
-    db.session.delete(user)
-    db.session.commit()
+    # Do not allow admins to remove other administrators through the UI/API.
+    if user.role != 'user':
+        flash("Administrator accounts are protected from deletion.", "danger")
+        return redirect(dashboard_url)
 
-    flash("User deleted successfully.", "success")
+    try:
+        deleted_email = user.email
+        # User.analyses has delete-orphan cascade, so history is deleted too.
+        db.session.delete(user)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("Unable to delete user ID %s", user_id)
+        flash("The user could not be deleted. Please try again.", "danger")
+    else:
+        flash(f"Deleted {deleted_email} and their analysis history.", "success")
 
-    return redirect(url_for('admin_dashboard'))
+    return redirect(dashboard_url)
+
+
 # ---------------------------------------------------------
 # Logout
 # ---------------------------------------------------------
