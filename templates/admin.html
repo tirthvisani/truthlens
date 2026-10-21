@@ -109,14 +109,6 @@
   </header>
 
   <main id="overview">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% for category, message in messages %}
-        <div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'info' }} alert-dismissible fade show mb-3" role="alert">
-          {{ message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-      {% endfor %}
-    {% endwith %}
     <div class="page-head">
       <div><div class="eyebrow">TruthLens Administration</div><h1>Admin Dashboard</h1><p class="subtitle">Review users, stored model predictions, confidence scores, and recent analysis activity.</p></div>
       <div class="actions d-flex gap-2">
@@ -274,6 +266,16 @@
           <div class="card-sub">Search accounts, review activity, or remove a normal user</div>
         </div>
         <span class="badge-status verified">{{ total_users }} users</span>
+      </div>
+      <div class="px-3">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'info' }} alert-dismissible fade show mb-3" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
       </div>
       <div class="user-tools">
         <label class="user-search-label" for="userSearch"><i class="bi bi-search"></i><span class="visually-hidden">Search users</span></label>
@@ -484,7 +486,7 @@ roleFilter.addEventListener('change', filterUsers);
 function confirmDeleteUser(form) {
   return window.confirm(
     'Permanently delete ' + form.dataset.userName +
-    '?\\n\\nThis will also delete their saved analysis history. This cannot be undone.'
+    '?\n\nThis will also delete their saved analysis history. This cannot be undone.'
   );
 }
 
