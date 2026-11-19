@@ -1,0 +1,221 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}Model & health{% endblock %}
+{% block header_title %}Model & health{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">System status</div>
+    <h1>Model &amp; health</h1>
+    <p class="subtitle">Check that the classifier and vectorizer are available, tune the decision threshold, and inspect offline evaluation artefacts.</p>
+  </div>
+</div>
+
+<section class="card-dark section-gap">
+  <div class="status-strip" style="padding:14px 18px">
+    <span class="status-pill"><span class="dot {{ 'dot-ok' if db_ok else 'dot-bad' }}"></span> Database {{ 'reachable' if db_ok else 'unreachable' }}</span>
+    <span class="status-pill"><span class="dot {{ 'dot-ok' if model_loaded else 'dot-bad' }}"></span> Model {{ 'loaded' if model_loaded else 'unavailable' }}</span>
+    <span class="status-pill"><span class="dot {{ 'dot-ok' if vectorizer_loaded else 'dot-bad' }}"></span> Vectorizer {{ 'loaded' if vectorizer_loaded else 'unavailable' }}</span>
+    <span class="status-pill"><span class="dot {{ 'dot-ok' if confusion_matrix_exists else 'dot-warn' }}"></span> Confusion matrix {{ 'available' if confusion_matrix_exists else 'missing' }}</span>
+  </div>
+</section>
+
+{% if model_error %}
+<div class="alert alert-danger mb-3" role="alert">
+  <strong>Model load error:</strong> {{ model_error }}
+</div>
+{% endif %}
+
+<section class="grid-2">
+  <div class="card-dark">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Deployed artefacts</div>
+        <div class="card-sub">Files loaded by the running application</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="info-grid">
+        <div class="info-item">
+          <span>Model file</span>
+          <strong class="mono">{{ 'training/truthlens_model.pkl' }}</strong>
+          <div class="source" style="font-size:11px;margin-top:5px">
+            {{ '%.2f MB'|format(model_file.size_mb) if model_file.exists else 'Missing' }}
+            {% if model_file.modified %} · {{ model_file.modified.strftime('%d %b %Y, %I:%M %p') }}{% endif %}
+          </div>
+        </div>
+        <div class="info-item">
+          <span>Vectorizer file</span>
+          <strong class="mono">{{ 'training/truthlens_tfidf_vectorizer.pkl' }}</strong>
+          <div class="source" style="font-size:11px;margin-top:5px">
+            {{ '%.2f MB'|format(vectorizer_file.size_mb) if vectorizer_file.exists else 'Missing' }}
+            {% if vectorizer_file.modified %} · {{ vectorizer_file.modified.strftime('%d %b %Y, %I:%M %p') }}{% endif %}
+          </div>
+        </div>
+        <div class="info-item">
+          <span>Class labels</span>
+          <strong>{{ model_classes|join(', ') if model_classes else '—' }}</strong>
+        </div>
+        <div class="info-item">
+          <span>Stored predictions</span>
+          <strong>{{ total_analyses }}</strong>
+        </div>
+        <div class="info-item">
+          <span>Corrected labels</span>
+          <strong>{{ corrected_count }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-dark">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Decision settings</div>
+        <div class="card-sub">Applied to every new prediction</div>
+      </div>
+    </div>
+    <form method="post" action="{{ url_for('admin.update_model_settings') }}" class="stack-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="filter-field">
+        <label for="fake_threshold">Fake threshold (probability)</label>
+        <input class="tool-input" id="fake_threshold" name="fake_threshold" type="number"
+               min="0.05" max="0.95" step="0.01" value="{{ '%.2f'|format(threshold) }}" required>
+        <div class="source" style="font-size:11px">
+          A claim is labelled <strong>Fake</strong> when the model's fake probability is at or above this value.
+          Default is 0.50; raise it to reduce false-fake flags.
+        </div>
+      </div>
+      <div class="filter-field">
+        <label for="model_version">Active model version</label>
+        <input class="tool-input" id="model_version" name="model_version" type="text" maxlength="20" value="{{ model_version }}">
+        <div class="source" style="font-size:11px">Stored with every new analysis so results stay traceable after retraining.</div>
+      </div>
+      <button class="btn-a primary" type="submit"><i class="bi bi-check2"></i> Save settings</button>
+    </form>
+  </div>
+</section>
+
+{% if metrics %}
+<section class="card-dark section-gap">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Offline evaluation metrics</div>
+      <div class="card-sub">Loaded from <span class="mono">training/truthlens_metrics.json</span></div>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table">
+      <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+      <tbody>
+        {% for key, value in metrics.items() %}
+        <tr>
+          <td>{{ key|replace('_', ' ')|title }}</td>
+          <td class="mono">{{ value if value is not mapping else value|tojson }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% else %}
+<section class="card-dark section-gap">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Offline evaluation metrics</div>
+      <div class="card-sub">No metrics file found</div>
+    </div>
+  </div>
+  <div class="card-body">
+    <p class="source mb-2">
+      Export the Step 4 evaluation results to <span class="mono">training/truthlens_metrics.json</span>
+      (accuracy, precision, recall, F1, test rows) and they will appear here automatically.
+    </p>
+  </div>
+</section>
+{% endif %}
+
+<section class="card-dark section-gap">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Human-label metrics</div>
+      <div class="card-sub">Measured against corrected labels supplied by administrators</div>
+    </div>
+    <a class="btn-a sm" href="{{ url_for('admin.analyses') }}"><i class="bi bi-tags"></i> Manage labels</a>
+  </div>
+  {% if human_metrics and human_metrics.total %}
+  <div class="card-body">
+    <div class="info-grid">
+      <div class="info-item"><span>Corrected labels</span><strong>{{ human_metrics.total }}</strong></div>
+      <div class="info-item"><span>Accuracy</span><strong>{{ '%.2f%%'|format(human_metrics.accuracy) if human_metrics.accuracy is not none else '—' }}</strong></div>
+      <div class="info-item"><span>Precision (Fake)</span><strong>{{ '%.2f%%'|format(human_metrics.precision) if human_metrics.precision is not none else '—' }}</strong></div>
+      <div class="info-item"><span>Recall (Fake)</span><strong>{{ '%.2f%%'|format(human_metrics.recall) if human_metrics.recall is not none else '—' }}</strong></div>
+      <div class="info-item"><span>F1 (Fake)</span><strong>{{ '%.2f%%'|format(human_metrics.f1) if human_metrics.f1 is not none else '—' }}</strong></div>
+      <div class="info-item"><span>Corrections</span><strong>{{ human_metrics.incorrect }}</strong></div>
+    </div>
+    <div class="table-responsive" style="margin-top:14px">
+      <table class="table">
+        <thead>
+          <tr><th>Human label</th><th>Predicted Fake</th><th>Predicted Real</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Actually Fake</td><td>{{ human_metrics.tp }}</td><td>{{ human_metrics.fn }}</td></tr>
+          <tr><td>Actually Real</td><td>{{ human_metrics.fp }}</td><td>{{ human_metrics.tn }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="source" style="font-size:11px;margin:10px 0 0">
+      Fake is the positive class. Precision, recall, and F1 are computed from corrected labels,
+      so they reflect real human judgement rather than the model's own predictions.
+    </p>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <p class="source mb-2" style="font-size:12px">
+      No corrected labels yet. Open an analysis, choose the true label, and human-label
+      accuracy, precision, recall, and F1 will appear here.
+    </p>
+    <a class="btn-a primary" href="{{ url_for('admin.analyses') }}"><i class="bi bi-tags"></i> Label analyses</a>
+  </div>
+  {% endif %}
+</section>
+
+<section class="grid-2">
+  <div class="card-dark">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Confusion matrix</div>
+        <div class="card-sub">Latest offline evaluation artefact</div>
+      </div>
+    </div>
+    <div class="card-body">
+      {% if confusion_matrix_exists %}
+      <img class="matrix-img" src="{{ url_for('admin.confusion_matrix') }}" alt="TruthLens confusion matrix">
+      {% else %}
+      <div class="empty"><i class="bi bi-image"></i>No confusion matrix image found in the training folder.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card-dark">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Retraining loop</div>
+        <div class="card-sub">Turn human-corrected labels into training data</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p class="source" style="font-size:12px;line-height:1.7">
+        Open predictions from the analyses page and set the corrected label. The CSV export
+        includes the original text, model verdict, confidence, human label, and who corrected
+        it, so corrected rows can be joined with the training dataset for the next model iteration.
+      </p>
+      <div class="d-flex gap-2 flex-wrap">
+        <a class="btn-a primary" href="{{ url_for('admin.export_analyses') }}"><i class="bi bi-download"></i> Export corrected data</a>
+        <a class="btn-a" href="{{ url_for('admin.analyses') }}"><i class="bi bi-tags"></i> Label analyses</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

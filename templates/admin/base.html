@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Admin{% endblock %} — TruthLens AI</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg-primary:#0f1117; --bg-secondary:#171a23; --bg-tertiary:#202430;
+      --bg-elevated:#272b38; --border:rgba(255,255,255,.08);
+      --text:#e8eaed; --muted:#9aa0a8; --faint:#686f7b;
+      --accent:#6366f1; --accent2:#818cf8; --success:#22c55e;
+      --warning:#f59e0b; --danger:#ef4444; --info:#3b82f6;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg-primary);color:var(--text);font-family:Inter,system-ui,sans-serif;font-size:14px}
+    a{color:var(--accent2);text-decoration:none}
+    a:hover{color:#c7c9ff}
+    .app{min-height:100vh;display:grid;grid-template-columns:250px 1fr;grid-template-rows:64px 1fr}
+    .sidebar{grid-row:1/3;background:#11141b;border-right:1px solid var(--border);padding:18px 12px;display:flex;flex-direction:column;transition:.25s}
+    .brand{display:flex;align-items:center;gap:11px;padding:4px 10px 22px;font-weight:800;font-size:17px;color:var(--text)}
+    .brand:hover{color:var(--text)}
+    .brand-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#818cf8,#4f46e5);display:grid;place-items:center;box-shadow:0 8px 24px rgba(99,102,241,.25);flex:none}
+    .brand small{display:block;color:var(--faint);font-size:9px;font-weight:600;letter-spacing:.12em;margin-top:2px}
+    .nav-title{color:#5f6672;text-transform:uppercase;font-size:10px;font-weight:700;letter-spacing:.12em;padding:12px 12px 7px}
+    .nav-link{color:var(--muted);display:flex;align-items:center;gap:11px;border-radius:8px;padding:10px 12px;margin:2px 0;text-decoration:none;transition:.18s;border-left:3px solid transparent}
+    .nav-link i{font-size:16px;width:18px;flex:none}.nav-link:hover{background:rgba(255,255,255,.045);color:var(--text)}
+    .nav-link.active{background:rgba(99,102,241,.14);color:#c7c9ff;border-left-color:var(--accent);padding-left:9px}
+    .nav-count{margin-left:auto;background:rgba(245,158,11,.16);color:#ffc35d;border-radius:999px;font-size:10px;font-weight:700;padding:2px 7px}
+    .sidebar-bottom{margin-top:auto;border-top:1px solid var(--border);padding-top:12px}
+    .header{grid-column:2;background:rgba(15,17,23,.92);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:18px;padding:0 24px;position:sticky;top:0;z-index:10;backdrop-filter:blur(14px)}
+    .header-title{font-weight:700;font-size:15px;white-space:nowrap}
+    .header-actions{margin-left:auto;display:flex;align-items:center;gap:12px}
+    .who{color:var(--muted);font-size:12px}
+    .icon-btn{width:36px;height:36px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--muted);border-radius:8px;display:grid;place-items:center;text-decoration:none}
+    .icon-btn:hover{color:var(--text);background:var(--bg-tertiary)}
+    .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#a5b4fc,#4f46e5);display:grid;place-items:center;color:white;font-weight:700;font-size:12px}
+    main{grid-column:2;padding:26px;min-width:0}
+    .page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:22px;flex-wrap:wrap}
+    .eyebrow{color:var(--accent2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em}
+    h1{font-size:27px;margin:3px 0 5px;font-weight:750;letter-spacing:-.03em}
+    .subtitle{color:var(--muted);margin:0;max-width:760px}
+    .card-dark{background:var(--bg-secondary);border:1px solid var(--border);border-radius:11px;box-shadow:0 5px 18px rgba(0,0,0,.12)}
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+    .kpi{padding:17px 18px;position:relative;overflow:hidden}.kpi-label{color:var(--muted);font-size:12px;font-weight:600}
+    .kpi-value{font-size:28px;font-weight:750;margin:7px 0 4px;letter-spacing:-.04em}
+    .trend{font-size:11px;font-weight:600;color:var(--faint)}.up{color:var(--success)}.down{color:var(--danger)}
+    .grid-2{display:grid;grid-template-columns:1.55fr 1fr;gap:14px;margin-bottom:14px}
+    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px}
+    .card-head{padding:16px 18px 11px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .card-title{font-weight:700;font-size:13px}.card-sub{color:var(--faint);font-size:11px;margin-top:3px}
+    .card-body{padding:0 18px 18px}
+    .chart-wrap{height:270px;padding:0 14px 14px}.chart-wrap canvas{width:100%!important;height:100%!important}
+    .legend{display:flex;gap:16px;color:var(--muted);font-size:11px}.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px}
+    .table-card{overflow:hidden}.table-responsive{max-height:560px}.table{--bs-table-bg:transparent;--bs-table-color:var(--text);margin:0}
+    .table>thead{position:sticky;top:0;z-index:2}.table th{background:var(--bg-tertiary);color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:12px 15px;border-bottom:1px solid var(--border);white-space:nowrap}
+    .table td{padding:12px 15px;border-color:var(--border);vertical-align:middle;color:#cdd0d6;font-size:12px}
+    .table tbody tr:hover{background:rgba(255,255,255,.025)}
+    .claim{max-width:420px;color:#e1e3e7!important;font-weight:500}.source{color:var(--muted)}
+    .badge-status{border-radius:999px;padding:5px 8px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-block}
+    .verified{background:rgba(34,197,94,.12);color:#5ee28a}
+    .false{background:rgba(239,68,68,.12);color:#ff7777}
+    .warn{background:rgba(245,158,11,.12);color:#ffc35d}
+    .neutral{background:rgba(148,163,184,.14);color:#b6bec9}
+    .confidence{font-weight:700}.high{color:var(--success)}.medium{color:var(--warning)}.low{color:var(--danger)}
+    .mini-list{padding:0 18px 16px}.mini-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)}.mini-row:last-child{border:0}
+    .mini-main{min-width:0;flex:1}.mini-main strong{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mini-main span{display:block;color:var(--faint);font-size:10px;margin-top:3px}
+    .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:0 18px 16px}
+    .tool-input,.tool-select{background:var(--bg-tertiary);border:1px solid var(--border);border-radius:7px;padding:9px 11px;color:var(--text);font-size:12px;outline:0}
+    .tool-input{flex:1;min-width:200px}
+    .tool-input:focus,.tool-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+    .tool-select{min-width:130px}.tool-select option,.tool-input option{background:var(--bg-secondary)}
+    .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;padding:0 18px 16px;align-items:end}
+    .filter-field{display:flex;flex-direction:column;gap:5px}
+    .filter-field label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:700}
+    .filter-field .tool-input,.filter-field .tool-select{width:100%;min-width:0}
+    .filter-actions{display:flex;gap:8px;align-items:center}
+    .btn-a{background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:8px 12px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+    .btn-a:hover{background:var(--bg-elevated);color:var(--text)}
+    .btn-a.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+    .btn-a.primary:hover{background:var(--accent2);border-color:var(--accent2)}
+    .btn-a.danger{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.08);color:#ff9393}
+    .btn-a.danger:hover{background:rgba(239,68,68,.18);color:#ffb3b3}
+    .btn-a.warn{border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.1);color:#ffc35d}
+    .btn-a.warn:hover{background:rgba(245,158,11,.18)}
+    .btn-a.sm{padding:5px 9px;font-size:11px}
+    .btn-a:disabled{opacity:.45;cursor:not-allowed}
+    .action-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+    .action-row form{margin:0}
+    .pager{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;border-top:1px solid var(--border);flex-wrap:wrap}
+    .pager-info{color:var(--faint);font-size:11px}
+    .pager-controls{display:flex;align-items:center;gap:8px}
+    .pg{background:var(--bg-tertiary);border:1px solid var(--border);border-radius:7px;padding:6px 10px;font-size:11px;font-weight:600;color:var(--text)}
+    .pg:hover{background:var(--bg-elevated);color:var(--text)}
+    .pg.is-disabled{opacity:.4;pointer-events:none}
+    .pg-current{color:var(--muted);font-size:11px}
+    .empty{padding:46px 18px;text-align:center;color:var(--muted)}
+    .empty i{display:block;font-size:30px;color:#7077d8;margin-bottom:10px}
+    .alert{background:#151923;border-color:var(--border);color:#d6d9e0;font-size:12px}
+    .alert-success{border-color:rgba(34,197,94,.3)}.alert-danger{border-color:rgba(239,68,68,.35)}
+    .alert-warning{border-color:rgba(245,158,11,.35)}.alert-info{border-color:rgba(59,130,246,.35)}
+    .info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+    .info-item{background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;padding:11px 12px}
+    .info-item span{display:block;color:var(--faint);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:4px}
+    .info-item strong{font-size:13px;font-weight:600;word-break:break-word}
+    .content-box{background:var(--bg-primary);border:1px solid var(--border);border-radius:9px;padding:16px;white-space:pre-wrap;word-break:break-word;color:#d7dae0;font-size:12px;line-height:1.75;max-height:480px;overflow:auto;font-family:Inter,system-ui,sans-serif;margin:0}
+    .stack-form{padding:0 18px 18px;display:grid;gap:10px}
+    .explain-list{padding:0 18px 10px;display:grid;gap:11px}
+    .explain-row{min-width:0}
+    .explain-head{display:flex;align-items:center;gap:8px;justify-content:space-between}
+    .explain-term{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:#e1e3e7;word-break:break-word;flex:1}
+    .explain-bar{height:6px;background:var(--bg-tertiary);border-radius:999px;overflow:hidden;margin-top:5px}
+    .explain-bar span{display:block;height:100%;border-radius:999px}
+    .explain-bar.fake span{background:var(--danger)}
+    .explain-bar.real span{background:var(--success)}
+    .status-strip{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:0 18px 16px;color:var(--muted);font-size:12px}
+    .status-pill{display:inline-flex;align-items:center;gap:7px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:999px;padding:6px 11px;font-size:11px}
+    .status-pill .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin:0}
+    .dot-ok{background:var(--success)}.dot-bad{background:var(--danger)}.dot-warn{background:var(--warning)}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px}
+    .section-gap{margin-bottom:14px}
+    .matrix-img{max-width:100%;border-radius:9px;border:1px solid var(--border);background:#fff}
+    .mobile-menu{display:none}
+    @media(max-width:1100px){
+      .app{grid-template-columns:70px 1fr}.sidebar{padding:18px 9px}
+      .brand span,.brand small,.nav-link span,.nav-title,.who{display:none}
+      .brand{justify-content:center;padding:4px 0 22px}.nav-link{justify-content:center}
+      .nav-link.active{padding-left:12px}.kpi-grid{grid-template-columns:repeat(2,1fr)}
+      .nav-count{display:none}
+    }
+    @media(max-width:800px){
+      .app{display:block}.sidebar{position:fixed;left:-260px;top:0;bottom:0;width:250px;z-index:100}.sidebar.open{left:0}
+      .header{height:60px;padding:0 14px}.mobile-menu{display:grid}.header-title{display:none}
+      main{padding:18px 14px}.grid-2,.grid-3{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}
+      .page-head{align-items:flex-end}.table-responsive{max-height:none}
+    }
+    @media(max-width:520px){
+      .kpi-grid{grid-template-columns:1fr 1fr;gap:8px}.kpi{padding:13px}.kpi-value{font-size:22px}
+      .page-head h1{font-size:22px}.subtitle{font-size:11px}
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="{{ url_for('admin.overview') }}">
+      <div class="brand-mark"><i class="bi bi-eye"></i></div>
+      <div><span>TruthLens AI</span><small>TRUTH INTELLIGENCE</small></div>
+    </a>
+
+    <div class="nav-title">Workspace</div>
+    <a class="nav-link {{ 'active' if request.endpoint in ['admin.overview'] }}" href="{{ url_for('admin.overview') }}">
+      <i class="bi bi-grid-1x2-fill"></i><span>Overview</span>
+    </a>
+    <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.user') }}" href="{{ url_for('admin.users') }}">
+      <i class="bi bi-people-fill"></i><span>Users</span>
+    </a>
+    <a class="nav-link {{ 'active' if request.endpoint in ['admin.analyses', 'admin.analysis_detail'] }}" href="{{ url_for('admin.analyses') }}">
+      <i class="bi bi-clock-history"></i><span>Analyses</span>
+    </a>
+    <a class="nav-link {{ 'active' if request.endpoint in ['admin.audit'] }}" href="{{ url_for('admin.audit') }}">
+      <i class="bi bi-journal-text"></i><span>Audit log</span>
+    </a>
+
+    <div class="nav-title">System</div>
+    <a class="nav-link {{ 'active' if request.endpoint in ['admin.model'] }}" href="{{ url_for('admin.model') }}">
+      <i class="bi bi-cpu"></i><span>Model &amp; health</span>
+    </a>
+
+    <div class="sidebar-bottom">
+      <a class="nav-link" href="{{ url_for('home') }}"><i class="bi bi-box-arrow-up-right"></i><span>View site</span></a>
+      <a class="nav-link" href="{{ url_for('change_password') }}"><i class="bi bi-key"></i><span>Change password</span></a>
+      <a class="nav-link" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a>
+    </div>
+  </aside>
+
+  <header class="header">
+    <button class="icon-btn mobile-menu" type="button" onclick="toggleSidebar()" aria-label="Toggle navigation"><i class="bi bi-list"></i></button>
+    <div class="header-title">{% block header_title %}Administration{% endblock %}</div>
+    <div class="header-actions">
+      <span class="who">{{ current_admin.name if current_admin else '' }}</span>
+      <div class="avatar">{{ ((current_admin.name if current_admin else 'Admin') or 'Admin')[:2]|upper }}</div>
+    </div>
+  </header>
+
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-3">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'info' }} alert-dismissible fade show mb-2" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function toggleSidebar(){
+    document.getElementById('sidebar').classList.toggle('open');
+  }
+  document.addEventListener('click', function(event){
+    const sidebar = document.getElementById('sidebar');
+    const menuButton = document.querySelector('.mobile-menu');
+    if (window.innerWidth <= 800 && sidebar.classList.contains('open')
+        && !sidebar.contains(event.target) && !menuButton.contains(event.target)) {
+      sidebar.classList.remove('open');
+    }
+  });
+  document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth <= 800) {
+        document.getElementById('sidebar').classList.remove('open');
+      }
+    });
+  });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

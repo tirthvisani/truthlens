@@ -1,0 +1,138 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import role_badge, status_badge, pager %}
+
+{% block title %}Users{% endblock %}
+{% block header_title %}Users{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Account management</div>
+    <h1>Users</h1>
+    <p class="subtitle">Search accounts, inspect activity, change roles, suspend access, or remove a user and their history.</p>
+  </div>
+  <a class="btn-a" href="{{ url_for('admin.export_users') }}{% if request.query_string %}?{{ request.query_string.decode('utf-8') }}{% endif %}">
+    <i class="bi bi-download"></i> Export CSV
+  </a>
+</div>
+
+<section class="card-dark table-card">
+  <div class="card-head">
+    <div>
+      <div class="card-title">All accounts</div>
+      <div class="card-sub">{{ pagination.total }} account{{ '' if pagination.total == 1 else 's' }} matching the current filters</div>
+    </div>
+    <span class="badge-status neutral">Page {{ pagination.page }} of {{ pagination.pages or 1 }}</span>
+  </div>
+
+  <form method="get" action="{{ url_for('admin.users') }}" class="filters">
+    <div class="filter-field">
+      <label for="q">Search</label>
+      <input class="tool-input" id="q" name="q" type="search" value="{{ request.args.get('q', '') }}" placeholder="Name or email">
+    </div>
+    <div class="filter-field">
+      <label for="role">Role</label>
+      <select class="tool-select" id="role" name="role">
+        <option value="all" {{ 'selected' if request.args.get('role', 'all') == 'all' }}>All roles</option>
+        <option value="user" {{ 'selected' if request.args.get('role') == 'user' }}>Users</option>
+        <option value="admin" {{ 'selected' if request.args.get('role') == 'admin' }}>Admins</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="status">Status</label>
+      <select class="tool-select" id="status" name="status">
+        <option value="all" {{ 'selected' if request.args.get('status', 'all') == 'all' }}>Any status</option>
+        <option value="active" {{ 'selected' if request.args.get('status') == 'active' }}>Active</option>
+        <option value="suspended" {{ 'selected' if request.args.get('status') == 'suspended' }}>Suspended</option>
+      </select>
+    </div>
+    <div class="filter-actions">
+      <button class="btn-a primary" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+      <a class="btn-a" href="{{ url_for('admin.users') }}">Reset</a>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Analyses</th>
+          <th>Last login</th>
+          <th>Registered</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in pagination.items %}
+        <tr>
+          <td>{{ user.id }}</td>
+          <td class="claim">
+            <a href="{{ url_for('admin.user_detail', user_id=user.id) }}">{{ user.name }}</a>
+          </td>
+          <td class="source">{{ user.email }}</td>
+          <td>{{ role_badge(user.role) }}</td>
+          <td>{{ status_badge(user.is_active) }}</td>
+          <td>{{ analysis_counts.get(user.id, 0) }}</td>
+          <td>
+            {% if user.last_login_at %}
+              {{ user.last_login_at.strftime('%d %b %Y, %I:%M %p') }}
+            {% else %}
+              <span class="source">Never</span>
+            {% endif %}
+          </td>
+          <td>{{ user.date_created.strftime('%d %b %Y') if user.date_created else '—' }}</td>
+          <td>
+            {% if user.id == current_admin.id %}
+              <span class="protected-label source" style="font-size:11px"><i class="bi bi-shield-lock"></i> You</span>
+            {% else %}
+              <div class="action-row">
+                <a class="btn-a sm" href="{{ url_for('admin.user_detail', user_id=user.id) }}" title="View account"><i class="bi bi-eye"></i></a>
+
+                <form method="post" action="{{ url_for('admin.set_user_role', user_id=user.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="role" value="{{ 'user' if user.role == 'admin' else 'admin' }}">
+                  <button class="btn-a sm {{ 'warn' if user.role == 'admin' else '' }}" type="submit"
+                          title="{{ 'Demote to user' if user.role == 'admin' else 'Promote to admin' }}">
+                    <i class="bi {{ 'bi-arrow-down-circle' if user.role == 'admin' else 'bi-arrow-up-circle' }}"></i>
+                  </button>
+                </form>
+
+                <form method="post" action="{{ url_for('admin.set_user_status', user_id=user.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="action" value="{{ 'activate' if not user.is_active else 'suspend' }}">
+                  <button class="btn-a sm {{ 'warn' if user.is_active else '' }}" type="submit"
+                          title="{{ 'Reactivate account' if not user.is_active else 'Suspend account' }}">
+                    <i class="bi {{ 'bi-person-check' if not user.is_active else 'bi-person-slash' }}"></i>
+                  </button>
+                </form>
+
+                {% if user.role == 'user' %}
+                <form method="post" action="{{ url_for('admin.delete_user', user_id=user.id) }}"
+                      onsubmit='return confirm("Permanently delete " + {{ user.name|tojson }} + " and all of their analysis history? This cannot be undone.");'>
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <button class="btn-a sm danger" type="submit" title="Delete account and history"><i class="bi bi-trash3"></i></button>
+                </form>
+                {% endif %}
+              </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="9">
+            <div class="empty"><i class="bi bi-people"></i>No accounts match the current filters.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {{ pager(pagination) }}
+</section>
+{% endblock %}

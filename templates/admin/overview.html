@@ -1,0 +1,344 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import verdict_badge, corrected_badge, confidence_class %}
+
+{% block title %}Overview{% endblock %}
+{% block header_title %}Overview{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">TruthLens Administration</div>
+    <h1>Admin Dashboard</h1>
+    <p class="subtitle">Monitor model activity, inspect verdict explanations, manage accounts, track corrected-label quality, and keep an audit trail of administrative actions.</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn-a" href="{{ url_for('admin.export_analyses') }}"><i class="bi bi-download"></i> Export analyses</a>
+    <a class="btn-a" href="{{ url_for('admin.export_users') }}"><i class="bi bi-download"></i> Export users</a>
+    <a class="btn-a primary" href="{{ url_for('home') }}#analyze"><i class="bi bi-plus-lg"></i> Analyze claim</a>
+  </div>
+</div>
+
+<section class="card-dark section-gap">
+  <div class="status-strip" style="padding:14px 18px">
+    <span class="status-pill">
+      <span class="dot {{ 'dot-ok' if model_loaded else 'dot-bad' }}"></span>
+      Model {{ 'loaded' if model_loaded else 'unavailable' }}
+    </span>
+    <span class="status-pill"><i class="bi bi-tag"></i> Version {{ model_version }}</span>
+    <span class="status-pill"><i class="bi bi-sliders"></i> Fake threshold {{ '%.2f'|format(threshold) }}</span>
+    <a class="status-pill" href="{{ url_for('admin.analyses') }}">
+      <span class="dot {{ 'dot-ok' if corrected_count else 'dot-warn' }}"></span>
+      {{ corrected_count }} corrected label{{ '' if corrected_count == 1 else 's' }}
+    </a>
+    <a class="status-pill" href="{{ url_for('admin.analyses', max_confidence='59.99') }}">
+      <span class="dot {{ 'dot-warn' if low_confidence else 'dot-ok' }}"></span>
+      {{ low_confidence }} low-confidence
+    </a>
+    <a class="ms-auto" href="{{ url_for('admin.model') }}">Model details <i class="bi bi-arrow-right"></i></a>
+  </div>
+</section>
+
+<section class="kpi-grid">
+  <div class="card-dark kpi">
+    <div class="kpi-label">Total Analyses</div>
+    <div class="kpi-value">{{ total_analyses }}</div>
+    <div class="trend"><i class="bi bi-cpu"></i> Stored user predictions</div>
+  </div>
+  <div class="card-dark kpi">
+    <div class="kpi-label">Likely Real</div>
+    <div class="kpi-value">{{ total_real }}</div>
+    <div class="trend up"><i class="bi bi-check-circle"></i> Real verdicts</div>
+  </div>
+  <div class="card-dark kpi">
+    <div class="kpi-label">Likely Fake</div>
+    <div class="kpi-value">{{ total_fake }}</div>
+    <div class="trend down"><i class="bi bi-exclamation-triangle"></i> Fake verdicts</div>
+  </div>
+  <div class="card-dark kpi">
+    <div class="kpi-label">Average Confidence</div>
+    <div class="kpi-value">{{ '%.2f'|format(avg_confidence) }}%</div>
+    <div class="trend"><i class="bi bi-speedometer2"></i> Across user analyses</div>
+  </div>
+</section>
+
+<section class="kpi-grid">
+  <div class="card-dark kpi">
+    <div class="kpi-label">Total Users</div>
+    <div class="kpi-value">{{ total_normal_users }}</div>
+    <div class="trend up"><i class="bi bi-people"></i> Registered user accounts</div>
+  </div>
+  <div class="card-dark kpi">
+    <div class="kpi-label">Active Users</div>
+    <div class="kpi-value">{{ active_users }}</div>
+    <div class="trend up"><i class="bi bi-person-check"></i> Able to sign in</div>
+  </div>
+  <div class="card-dark kpi">
+    <div class="kpi-label">Suspended</div>
+    <div class="kpi-value">{{ suspended_users }}</div>
+    <div class="trend"><i class="bi bi-person-slash"></i> Blocked accounts</div>
+  </div>
+  <div class="card-dark kpi">
+    <div class="kpi-label">Admins</div>
+    <div class="kpi-value">{{ total_admins }}</div>
+    <div class="trend"><i class="bi bi-shield-lock"></i> Of {{ total_users }} accounts</div>
+  </div>
+</section>
+
+<section class="card-dark section-gap">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Human-label quality</div>
+      <div class="card-sub">Real accuracy, precision, recall, and F1 from administrator-corrected labels</div>
+    </div>
+    <a class="btn-a sm" href="{{ url_for('admin.analyses') }}"><i class="bi bi-tags"></i> Manage labels</a>
+  </div>
+  {% if human_metrics.total %}
+  <div class="card-body">
+    <div class="info-grid">
+      <div class="info-item"><span>Corrected labels</span><strong>{{ human_metrics.total }}</strong></div>
+      <div class="info-item"><span>Accuracy</span><strong>{{ '%.2f%%'|format(human_metrics.accuracy) if human_metrics.accuracy is not none else '—' }}</strong></div>
+      <div class="info-item"><span>Precision (Fake)</span><strong>{{ '%.2f%%'|format(human_metrics.precision) if human_metrics.precision is not none else '—' }}</strong></div>
+      <div class="info-item"><span>Recall (Fake)</span><strong>{{ '%.2f%%'|format(human_metrics.recall) if human_metrics.recall is not none else '—' }}</strong></div>
+      <div class="info-item"><span>F1 (Fake)</span><strong>{{ '%.2f%%'|format(human_metrics.f1) if human_metrics.f1 is not none else '—' }}</strong></div>
+      <div class="info-item"><span>Model corrections</span><strong>{{ human_metrics.incorrect }}</strong></div>
+    </div>
+    <p class="source" style="font-size:11px;margin:10px 0 0">
+      Confusion counts — true fake {{ human_metrics.tp }}, false fake {{ human_metrics.fp }},
+      missed fake {{ human_metrics.fn }}, true real {{ human_metrics.tn }}.
+    </p>
+  </div>
+  {% else %}
+  <div class="card-body">
+    <p class="source" style="font-size:12px;margin:0">
+      No corrected labels yet. Open an analysis, set the true label, and human-label metrics
+      will replace the model's self-reported numbers.
+    </p>
+  </div>
+  {% endif %}
+</section>
+
+<section class="grid-2">
+  <div class="card-dark">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Verification Activity</div>
+        <div class="card-sub">User predictions during the last 7 days</div>
+      </div>
+      <div class="legend">
+        <span><i class="dot" style="background:#6366f1"></i>Analyzed</span>
+        <span><i class="dot" style="background:#22c55e"></i>Likely Real</span>
+        <span><i class="dot" style="background:#ef4444"></i>Likely Fake</span>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="activityChart"></canvas></div>
+  </div>
+  <div class="card-dark">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Verdict Distribution</div>
+        <div class="card-sub">All stored user predictions</div>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="verdictChart"></canvas></div>
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="card-dark">
+    <div class="card-head">
+      <div>
+        <div class="card-title">User Registration Trend</div>
+        <div class="card-sub">New accounts during the last 6 months</div>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="userRegistrationChart"></canvas></div>
+  </div>
+  <div class="card-dark">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Account Roles</div>
+        <div class="card-sub">Current user / admin split</div>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="userRoleChart"></canvas></div>
+  </div>
+</section>
+
+<section class="card-dark table-card section-gap">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Recent Claim Analysis</div>
+      <div class="card-sub">Latest predictions saved by normal users</div>
+    </div>
+    <a class="btn-a sm" href="{{ url_for('admin.analyses') }}">View all <i class="bi bi-arrow-right"></i></a>
+  </div>
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Claim</th>
+          <th>User</th>
+          <th>Verdict</th>
+          <th>Confidence</th>
+          <th>Human label</th>
+          <th>Analyzed On</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in recent_analyses %}
+        <tr>
+          <td class="claim" title="{{ item.content }}">
+            <a href="{{ url_for('admin.analysis_detail', analysis_id=item.id) }}">{{ item.content|truncate(100, True, '…') }}</a>
+          </td>
+          <td class="source">{{ item.user.name if item.user else 'Unknown' }}</td>
+          <td>{{ verdict_badge(item.prediction) }}</td>
+          <td class="confidence {{ confidence_class(item.confidence) }}">{{ '%.2f'|format(item.confidence) }}%</td>
+          <td>{{ corrected_badge(item.corrected_label) }}</td>
+          <td>{{ item.date_created.strftime('%d %b %Y, %I:%M %p') if item.date_created else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center">No analysis history yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="card-dark">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Low-Confidence Queue</div>
+        <div class="card-sub">Predictions below 60% confidence</div>
+      </div>
+      <a class="btn-a sm" href="{{ url_for('admin.analyses', max_confidence='59.99') }}">Inspect</a>
+    </div>
+    <div class="mini-list">
+      {% for item in low_confidence_items %}
+      <div class="mini-row">
+        <div class="mini-main">
+          <strong><a href="{{ url_for('admin.analysis_detail', analysis_id=item.id) }}">{{ item.content|truncate(72, True, '…') }}</a></strong>
+          <span>{{ item.user.name if item.user else 'Unknown' }} · {{ item.date_created.strftime('%d %b, %I:%M %p') }}</span>
+        </div>
+        <span class="confidence low">{{ '%.2f'|format(item.confidence) }}%</span>
+      </div>
+      {% else %}
+      <div class="empty"><i class="bi bi-check2-circle"></i>No low-confidence predictions.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card-dark">
+    <div class="card-head">
+      <div>
+        <div class="card-title">Recent Admin Activity</div>
+        <div class="card-sub">Every sensitive action is logged</div>
+      </div>
+      <a class="btn-a sm" href="{{ url_for('admin.audit') }}">Audit log</a>
+    </div>
+    <div class="mini-list">
+      {% for entry in recent_admin_actions %}
+      <div class="mini-row">
+        <div class="mini-main">
+          <strong>{{ entry.action }}</strong>
+          <span>{{ entry.detail or entry.target_type or '—' }}</span>
+        </div>
+        <span class="source" style="font-size:10px">{{ entry.created_at.strftime('%d %b, %I:%M %p') }}</span>
+      </div>
+      {% else %}
+      <div class="empty"><i class="bi bi-journal-text"></i>No admin actions recorded yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  const gridColor = 'rgba(255,255,255,.06)';
+  const axisTicks = {color:'#686f7b', font:{size:9}};
+
+  new Chart(document.getElementById('activityChart'), {
+    type: 'line',
+    data: {
+      labels: {{ activity_labels | tojson }},
+      datasets: [
+        {label:'Analyzed', data:{{ activity_total | tojson }}, borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,.08)', fill:true, tension:.38, pointRadius:3, borderWidth:2},
+        {label:'Likely Real', data:{{ activity_real | tojson }}, borderColor:'#22c55e', fill:false, tension:.38, pointRadius:3, borderWidth:2},
+        {label:'Likely Fake', data:{{ activity_fake | tojson }}, borderColor:'#ef4444', fill:false, tension:.38, pointRadius:3, borderWidth:2}
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{mode:'index', intersect:false}},
+      scales:{
+        x:{grid:{display:false}, ticks:axisTicks},
+        y:{grid:{color:gridColor}, ticks:axisTicks, beginAtZero:true, precision:0}
+      }
+    }
+  });
+
+  new Chart(document.getElementById('verdictChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Likely Real', 'Likely Fake'],
+      datasets: [{
+        data: [{{ total_real }}, {{ total_fake }}],
+        backgroundColor: ['#22c55e', '#ef4444'],
+        borderColor: '#171a23',
+        borderWidth: 5
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false, cutout:'72%',
+      plugins:{
+        legend:{position:'bottom', labels:{color:'#9aa0a8', padding:16, font:{size:10}, usePointStyle:true, pointStyle:'circle'}},
+        tooltip:{callbacks:{label:c => ' ' + c.label + ': ' + c.raw}}
+      }
+    }
+  });
+
+  new Chart(document.getElementById('userRegistrationChart'), {
+    type: 'line',
+    data: {
+      labels: {{ registration_labels | tojson }},
+      datasets: [{
+        label: 'New Users',
+        data: {{ registration_counts | tojson }},
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99,102,241,.08)',
+        fill: true, tension:.38, pointRadius:3, borderWidth:2
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{mode:'index', intersect:false}},
+      scales:{
+        x:{grid:{display:false}, ticks:axisTicks},
+        y:{grid:{color:gridColor}, ticks:axisTicks, beginAtZero:true, precision:0}
+      }
+    }
+  });
+
+  new Chart(document.getElementById('userRoleChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Normal Users', 'Admins'],
+      datasets: [{
+        data: [{{ total_normal_users }}, {{ total_admins }}],
+        backgroundColor: ['#6366f1', '#f59e0b'],
+        borderColor: '#171a23',
+        borderWidth: 5
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false, cutout:'72%',
+      plugins:{
+        legend:{position:'bottom', labels:{color:'#9aa0a8', padding:16, font:{size:10}, usePointStyle:true, pointStyle:'circle'}},
+        tooltip:{callbacks:{label:c => ' ' + c.label + ': ' + c.raw}}
+      }
+    }
+  });
+</script>
+{% endblock %}

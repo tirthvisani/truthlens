@@ -1,0 +1,126 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import verdict_badge, corrected_badge, role_badge, status_badge, confidence_class, pager %}
+
+{% block title %}{{ user.name }}{% endblock %}
+{% block header_title %}User detail{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow"><a href="{{ url_for('admin.users') }}"><i class="bi bi-arrow-left"></i> Back to users</a></div>
+    <h1>{{ user.name }}</h1>
+    <p class="subtitle">
+      {{ user.email }} · {{ role_badge(user.role) }} {{ status_badge(user.is_active) }}
+    </p>
+  </div>
+
+  {% if user.id != current_admin.id %}
+  <div class="d-flex gap-2 flex-wrap">
+    <form method="post" action="{{ url_for('admin.set_user_role', user_id=user.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="role" value="{{ 'user' if user.role == 'admin' else 'admin' }}">
+      <button class="btn-a {{ 'warn' if user.role == 'admin' else '' }}" type="submit">
+        <i class="bi {{ 'bi-arrow-down-circle' if user.role == 'admin' else 'bi-arrow-up-circle' }}"></i>
+        {{ 'Demote to user' if user.role == 'admin' else 'Promote to admin' }}
+      </button>
+    </form>
+
+    <form method="post" action="{{ url_for('admin.set_user_status', user_id=user.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="action" value="{{ 'activate' if not user.is_active else 'suspend' }}">
+      <button class="btn-a {{ 'warn' if user.is_active else '' }}" type="submit">
+        <i class="bi {{ 'bi-person-check' if not user.is_active else 'bi-person-slash' }}"></i>
+        {{ 'Reactivate account' if not user.is_active else 'Suspend account' }}
+      </button>
+    </form>
+
+    <form method="post" action="{{ url_for('admin.reset_user_password', user_id=user.id) }}"
+          onsubmit='return confirm("Generate a new temporary password for " + {{ user.email|tojson }} + "?");'>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn-a" type="submit"><i class="bi bi-key"></i> Reset password</button>
+    </form>
+
+    {% if user.role == 'user' %}
+    <form method="post" action="{{ url_for('admin.delete_user', user_id=user.id) }}"
+          onsubmit='return confirm("Permanently delete " + {{ user.name|tojson }} + " and all of their analysis history? This cannot be undone.");'>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn-a danger" type="submit"><i class="bi bi-trash3"></i> Delete account</button>
+    </form>
+    {% endif %}
+  </div>
+  {% else %}
+  <span class="badge-status warn"><i class="bi bi-shield-lock"></i> This is your account</span>
+  {% endif %}
+</div>
+
+<section class="card-dark section-gap">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Account overview</div>
+      <div class="card-sub">Identity, access, and activity summary</div>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="info-grid">
+      <div class="info-item"><span>User ID</span><strong>#{{ user.id }}</strong></div>
+      <div class="info-item"><span>Role</span><strong>{{ user.role|upper }}</strong></div>
+      <div class="info-item"><span>Status</span><strong>{{ 'Active' if user.is_active else 'Suspended' }}</strong></div>
+      <div class="info-item"><span>Registered</span><strong>{{ user.date_created.strftime('%d %b %Y, %I:%M %p') if user.date_created else '—' }}</strong></div>
+      <div class="info-item"><span>Last login</span><strong>{{ user.last_login_at.strftime('%d %b %Y, %I:%M %p') if user.last_login_at else 'Never' }}</strong></div>
+      <div class="info-item"><span>Last login IP</span><strong>{{ user.last_login_ip or '—' }}</strong></div>
+      <div class="info-item"><span>Analyses</span><strong>{{ stats.total }}</strong></div>
+      <div class="info-item"><span>Average confidence</span><strong>{{ '%.2f'|format(stats.avg_confidence) }}%</strong></div>
+      <div class="info-item"><span>Likely real</span><strong>{{ stats.real }}</strong></div>
+      <div class="info-item"><span>Likely fake</span><strong>{{ stats.fake }}</strong></div>
+      <div class="info-item"><span>Corrected labels</span><strong>{{ stats.corrected }}</strong></div>
+      <div class="info-item"><span>Last analysed</span><strong>{{ stats.last_activity.strftime('%d %b %Y, %I:%M %p') if stats.last_activity else '—' }}</strong></div>
+    </div>
+  </div>
+</section>
+
+<section class="card-dark table-card">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Analysis history</div>
+      <div class="card-sub">Predictions stored for this account</div>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Claim</th>
+          <th>Verdict</th>
+          <th>Confidence</th>
+          <th>Source</th>
+          <th>Human label</th>
+          <th>Analyzed On</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in pagination.items %}
+        <tr>
+          <td class="claim" title="{{ item.content }}">
+            <a href="{{ url_for('admin.analysis_detail', analysis_id=item.id) }}">{{ item.content|truncate(110, True, '…') }}</a>
+          </td>
+          <td>{{ verdict_badge(item.prediction) }}</td>
+          <td class="confidence {{ confidence_class(item.confidence) }}">{{ '%.2f'|format(item.confidence) }}%</td>
+          <td class="source">
+            {% if item.source_type == 'url' and item.source_url %}
+              <a href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer">{{ item.source_url|truncate(40, True, '…') }}</a>
+            {% else %}
+              Pasted text
+            {% endif %}
+          </td>
+          <td>{{ corrected_badge(item.corrected_label) }}</td>
+          <td>{{ item.date_created.strftime('%d %b %Y, %I:%M %p') if item.date_created else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6"><div class="empty"><i class="bi bi-clock-history"></i>This account has no saved analyses.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pager(pagination) }}
+</section>
+{% endblock %}

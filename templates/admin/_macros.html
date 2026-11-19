@@ -1,0 +1,43 @@
+{% macro verdict_badge(value) -%}
+  <span class="badge-status {{ 'false' if value == 'Fake' else 'verified' }}">
+    {{ 'LIKELY FAKE' if value == 'Fake' else 'LIKELY REAL' }}
+  </span>
+{%- endmacro %}
+
+{% macro corrected_badge(label) -%}
+  {% if label %}
+  <span class="badge-status {{ 'verified' if label == 'Real' else 'false' }}">
+    HUMAN: {{ label|upper }}
+  </span>
+  {% else %}
+  <span class="badge-status neutral">UNCORRECTED</span>
+  {% endif %}
+{%- endmacro %}
+
+{% macro role_badge(role) -%}
+  <span class="badge-status {{ 'warn' if role == 'admin' else 'verified' }}">
+    {{ 'ADMIN' if role == 'admin' else 'USER' }}
+  </span>
+{%- endmacro %}
+
+{% macro status_badge(is_active) -%}
+  <span class="badge-status {{ 'verified' if is_active else 'false' }}">
+    {{ 'ACTIVE' if is_active else 'SUSPENDED' }}
+  </span>
+{%- endmacro %}
+
+{% macro confidence_class(value) -%}
+  {{ 'high' if value >= 75 else ('medium' if value >= 60 else 'low') }}
+{%- endmacro %}
+
+{% macro pager(p) -%}
+  {% set pages = p.pages or 1 %}
+  <div class="pager">
+    <span class="pager-info">{{ p.total }} record{{ '' if p.total == 1 else 's' }}</span>
+    <div class="pager-controls">
+      <a class="pg {{ 'is-disabled' if not p.has_prev }}" href="{{ page_url(p.prev_num) if p.has_prev else '#' }}">Prev</a>
+      <span class="pg-current">Page {{ p.page }} / {{ pages }}</span>
+      <a class="pg {{ 'is-disabled' if not p.has_next }}" href="{{ page_url(p.next_num) if p.has_next else '#' }}">Next</a>
+    </div>
+  </div>
+{%- endmacro %}

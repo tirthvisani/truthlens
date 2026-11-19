@@ -1,0 +1,110 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import verdict_badge, corrected_badge, confidence_class, pager %}
+
+{% block title %}Analyses{% endblock %}
+{% block header_title %}Analyses{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Prediction records</div>
+    <h1>Analysis records</h1>
+    <p class="subtitle">Filter stored predictions, add human-corrected labels, and export labelled data for retraining.</p>
+  </div>
+  <a class="btn-a" href="{{ url_for('admin.export_analyses') }}{% if request.query_string %}?{{ request.query_string.decode('utf-8') }}{% endif %}">
+    <i class="bi bi-download"></i> Export CSV
+  </a>
+</div>
+
+<section class="card-dark table-card">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Prediction records</div>
+      <div class="card-sub">{{ pagination.total }} result{{ '' if pagination.total == 1 else 's' }} matching the current filters</div>
+    </div>
+  </div>
+
+  <form method="get" action="{{ url_for('admin.analyses') }}" class="filters">
+    <div class="filter-field">
+      <label for="start">From date</label>
+      <input class="tool-input" id="start" name="start" type="date" value="{{ request.args.get('start', '') }}">
+    </div>
+    <div class="filter-field">
+      <label for="end">To date</label>
+      <input class="tool-input" id="end" name="end" type="date" value="{{ request.args.get('end', '') }}">
+    </div>
+    <div class="filter-field">
+      <label for="user_id">User</label>
+      <select class="tool-select" id="user_id" name="user_id">
+        <option value="">All users</option>
+        {% for u in users %}
+        <option value="{{ u.id }}" {{ 'selected' if request.args.get('user_id') == u.id|string }}>{{ u.name }} ({{ u.email }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="verdict">Verdict</label>
+      <select class="tool-select" id="verdict" name="verdict">
+        <option value="all">All verdicts</option>
+        <option value="Real" {{ 'selected' if request.args.get('verdict') == 'Real' }}>Likely real</option>
+        <option value="Fake" {{ 'selected' if request.args.get('verdict') == 'Fake' }}>Likely fake</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="min_confidence">Min confidence</label>
+      <input class="tool-input" id="min_confidence" name="min_confidence" type="number" min="0" max="100" step="0.01" value="{{ request.args.get('min_confidence', '') }}" placeholder="0">
+    </div>
+    <div class="filter-field">
+      <label for="max_confidence">Max confidence</label>
+      <input class="tool-input" id="max_confidence" name="max_confidence" type="number" min="0" max="100" step="0.01" value="{{ request.args.get('max_confidence', '') }}" placeholder="100">
+    </div>
+    <div class="filter-actions">
+      <button class="btn-a primary" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+      <a class="btn-a" href="{{ url_for('admin.analyses') }}">Reset</a>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Claim</th>
+          <th>User</th>
+          <th>Verdict</th>
+          <th>Confidence</th>
+          <th>Source</th>
+          <th>Human label</th>
+          <th>Analyzed On</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in pagination.items %}
+        <tr>
+          <td>{{ item.id }}</td>
+          <td class="claim" title="{{ item.content }}">
+            <a href="{{ url_for('admin.analysis_detail', analysis_id=item.id) }}">{{ item.content|truncate(90, True, '…') }}</a>
+          </td>
+          <td class="source">{{ item.user.name if item.user else 'Unknown' }}</td>
+          <td>{{ verdict_badge(item.prediction) }}</td>
+          <td class="confidence {{ confidence_class(item.confidence) }}">{{ '%.2f'|format(item.confidence) }}%</td>
+          <td class="source">
+            {% if item.source_type == 'url' and item.source_url %}
+              <a href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer" title="{{ item.source_url }}">URL <i class="bi bi-box-arrow-up-right"></i></a>
+            {% else %}
+              Text
+            {% endif %}
+          </td>
+          <td>{{ corrected_badge(item.corrected_label) }}</td>
+          <td>{{ item.date_created.strftime('%d %b %Y, %I:%M %p') if item.date_created else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8"><div class="empty"><i class="bi bi-clock-history"></i>No analyses match the current filters.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {{ pager(pagination) }}
+</section>
+{% endblock %}

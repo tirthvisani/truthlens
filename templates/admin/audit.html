@@ -1,0 +1,82 @@
+{% extends 'admin/base.html' %}
+{% from 'admin/_macros.html' import pager %}
+
+{% block title %}Audit log{% endblock %}
+{% block header_title %}Audit log{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Accountability</div>
+    <h1>Audit log</h1>
+    <p class="subtitle">Every sensitive administrative action is recorded with the actor, target, IP address, and timestamp.</p>
+  </div>
+</div>
+
+<section class="card-dark table-card">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Administrative actions</div>
+      <div class="card-sub">{{ pagination.total }} recorded event{{ '' if pagination.total == 1 else 's' }}</div>
+    </div>
+  </div>
+
+  <form method="get" action="{{ url_for('admin.audit') }}" class="filters">
+    <div class="filter-field">
+      <label for="action">Action</label>
+      <select class="tool-select" id="action" name="action">
+        <option value="all">All actions</option>
+        {% for action in actions %}
+        <option value="{{ action }}" {{ 'selected' if request.args.get('action') == action }}>{{ action }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="admin_id">Administrator</label>
+      <select class="tool-select" id="admin_id" name="admin_id">
+        <option value="">All admins</option>
+        {% for admin in admins %}
+        <option value="{{ admin.id }}" {{ 'selected' if request.args.get('admin_id') == admin.id|string }}>{{ admin.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-actions">
+      <button class="btn-a primary" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+      <a class="btn-a" href="{{ url_for('admin.audit') }}">Reset</a>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Admin</th>
+          <th>Action</th>
+          <th>Target</th>
+          <th>Details</th>
+          <th>IP address</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in pagination.items %}
+        <tr>
+          <td>{{ entry.created_at.strftime('%d %b %Y, %I:%M:%S %p') if entry.created_at else '—' }}</td>
+          <td class="source">{{ entry.admin.name if entry.admin else 'Deleted admin' }}</td>
+          <td><span class="badge-status neutral">{{ entry.action }}</span></td>
+          <td class="source">
+            {% if entry.target_type %}{{ entry.target_type }}{% if entry.target_id %} #{{ entry.target_id }}{% endif %}{% else %}—{% endif %}
+          </td>
+          <td class="claim" title="{{ entry.detail or '' }}">{{ (entry.detail or '—')|truncate(90, True, '…') }}</td>
+          <td class="mono">{{ entry.ip_address or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6"><div class="empty"><i class="bi bi-journal-text"></i>No audit events recorded yet.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {{ pager(pagination) }}
+</section>
+{% endblock %}
